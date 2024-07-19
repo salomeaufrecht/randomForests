@@ -2,7 +2,7 @@
 #' 
 #' there are more tags...
 #' compile with devtools::document()
-#' @export costComplexityPruning
+#' @export #visible from outside
 #' @param x whatever
 #' 
-costComplexityPruning <- function(x) x
+foo <- function(x) x

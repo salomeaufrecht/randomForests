@@ -2,8 +2,8 @@ source("R/tree_datastructure.R")
 
 testTreeDatastructure = function() {
   cat("Testing Tree datastructure...\n")
-  test = Tree$new(len=10)
-  element5 = test[5]
+  test <- Tree$new(len=10)
+  element5 <- test[5]
   print(test)
   print(element5)
   cat(paste0("Index of element 5: ", test[5]$index))

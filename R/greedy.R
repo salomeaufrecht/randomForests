@@ -2,7 +2,7 @@
 #' 
 #' there are more tags...
 #' compile with devtools::document()
-#' @export #visible from outside
+#' @export greedy
 #' @param x whatever
 #' 
-foo1 <- function(x) x
+greedy <- function(x) x

@@ -21,7 +21,7 @@ Tree <- setRefClass(
   methods = list(
     initialize = function(length=16, max_length = 1024, dimension = 50, classificationType = FALSE) {
       stopifnot(length >= 1)
-        # 1. Entry = Data, 2. Entry = j, 3. Entry = s
+        # 1. Entry = Index, 2. Entry = j, 3. Entry = s
       .self$data <- matrix(rep(NaN, max_length*3), ncol=3)
       .self$data[1:length, 1] <- 1:length
       .self$length <- length

@@ -34,6 +34,14 @@ Tree <- setRefClass(
         
         depth = function(index) floor(log2(index)) + 1,
         
+        copy = function(){
+            t <- Tree$new(.self$training_data_x, .self$training_data_y)
+            t$data <- .self$data
+            t$type <- .self$type
+            t$d <- .self$d
+            return(t)
+        },
+        
         exists = function(index) {
             if (length(index) > 1) return(.self$all_exist(index))
             if (index >= nrow(.self$data)) return(FALSE)
@@ -71,8 +79,8 @@ Tree <- setRefClass(
         },
         
         set_values = function(index, j=NA_integer_, s=NA_integer_, y=NA_integer_) {
-            
-        },
+            .self$data[index,c('j', 's', 'y')] <- c( j, s, y)
+        }, 
         
         get_children = function(index) {
             indices = .self$get_child_indices(index)
@@ -136,7 +144,29 @@ Tree <- setRefClass(
             children <- get_child_indices(index)
             plot_split_lines(children[1])
             plot_split_lines(children[2])
-        }
+        },
+        getLeaves = function(){
+            recLeaves(1)
+        },
+        
+        recLeaves = function(node){
+            if(!.self$is_leaf(node)){
+                return (c(recLeaves(.self$get_child_indices(node)[1]),
+                          recLeaves(.self$get_child_indices(node)[2])))
+            }
+            else return(node)
+        },
+        
+        makeLeaf = function(index){
+            .self$data[index, c('j', 's')] <- c(0, NA)
+            #TODO delete children
+        },
+        
+        getS = function(index){
+            return(.self[index][1, 's'])
+        },
+        
+        get_root = function() return(.self[1])
     )
 )
 
@@ -155,7 +185,7 @@ Tree <- setRefClass(
 `[.Tree` <- function(tree, value) {
     if (length(value) > 1) return(lapply(value, function(x) tree[x]))
     el <- tree$data[value,,drop=FALSE]
-    if((length(el) == 1 && is.na(el[1])) || is.na(el[2])) return(NA)
+    if((length(el) == 1 && is.na(el[1])) ) return(NA) #TODO || is.na(el[2]) removed 
     return(el)
 }
 

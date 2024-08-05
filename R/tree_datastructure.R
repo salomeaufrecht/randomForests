@@ -22,7 +22,7 @@ Tree <- setRefClass(
     methods = list(
         initialize = function(training_data_x, training_data_y, classificationType = FALSE) {
             stopifnot("Training data does not match" = nrow(training_data_x) == nrow(training_data_y))
-            length <- (2 ^ ceiling(log2(nrow(training_data_x)) )) # DEBUG BECAUSE EXTEND DOESNT WORK WITH ADD_CHILDREN
+            length <- (2 ^ ceiling(log2(nrow(training_data_x)) )) 
             .self$data <- matrix(rep(NA_integer_, length*4), ncol=4)
             colnames(.self$data) <- c("index", "j", "s", "y")
             .self$data[1:length, 1] <- 1:length
@@ -36,7 +36,8 @@ Tree <- setRefClass(
         
         exists = function(index) {
             if (length(index) > 1) return(.self$all_exist(index))
-            return(!is.na(.self$data[index, 2]) || !is.na(.self$data[index, 3]))
+            if (index >= nrow(.self$data)) return(FALSE)
+            return(any(!is.na(.self$data[index, 2:4])))
         },
         all_exist = function(indices) all(sapply(indices,.self$exists)),
         
@@ -49,13 +50,13 @@ Tree <- setRefClass(
         extend = function(length_new) {
             max_length <- nrow(.self$data)
             if (length_new <= max_length) return()
-            print("LOOL")
             # TODO: Discuss if this warning is necessary
             warning("Max length exceeded. More space will be allocated.")
             length_new <- 2 * max_length + 1 # 2 ^ ceiling(log2(length_new))
             new_matrix <- matrix(rep(NA_integer_, 4*length_new), ncol=4)
             new_matrix[1:max_length, ] <- .self$data[1:max_length, ]
             new_matrix[1:length_new, 1] <- 1:length_new
+            colnames(new_matrix) <-  c("index", "j", "s", "y")
             .self$data <- new_matrix
         },
         
@@ -98,7 +99,7 @@ Tree <- setRefClass(
         
         is_leaf = function(index) {
             if (!.self$exists(index)) stop("Node does not exist.")
-            return(!.self$exists(index*2))
+            return(all(is.na(.self$get_child_indices(index))))
         },
         
         decide = function(X) {
@@ -106,19 +107,26 @@ Tree <- setRefClass(
             while(!is_leaf(current_node)) {
                 j <- .self$data[current_node, "j"]
                 s <- .self$data[current_node, "s"]
-                cat("current node : ", current_node, j, s)
                 if(X[j] < s) {
                     current_node <- .self$get_child_indices(current_node)[1]
                 } else {
                 current_node <- .self$get_child_indices(current_node)[2]
                 }
-                print(.self$data[current_node, "y"])
             }
-            print(.self$data[current_node, "y"])
+            .self$data[current_node, "y"]
         },
         
         get_length = function() {
             return(sum(!is.na(.self$data[,2])))
+        },
+        
+        plot_data = function() {
+            X <- .self$training_data_x
+            Y <- .self$training_data_y
+            plot(X, Y, col='red')
+            
+            Y_hat <- sapply(X, \(x) .self$decide(c(x)))
+            points(X, Y_hat)
         }
     )
 )

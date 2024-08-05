@@ -6,8 +6,8 @@ testTreeDatastructure = function() {
 
   
   print("Assign element 1 & 2. Element 1:")
-  test[1] <- c(5,6, 0)
-  test[2] <- c(5324,631, 0)
+  test[1] <- c(5,6)
+  test[2] <- c(5324,631)
   print(test[1])
   cat("\nShould be: 1, 5, 6\n\n")
   cat("Element at index: 5\n")
@@ -18,7 +18,7 @@ testTreeDatastructure = function() {
   print(test[c(2,3,5)])
 
   cat(paste0("\nTest mass assignment and automatic extension. Length before: ", test$get_length(),"\n"))
-  test[c(3,4,5,6,7)] = rep(list(c(1,1,0)),5)
+  test[c(3,4,5,6,7)] = rep(list(c(1,1)),5)
   cat("Inserted elements (should all have j=1 and s=1):\n")
   print(test[c(3,4,5,6,7)])
   cat(paste0("\nLength after: ",test$get_length(), "Should be: 7\n\n"))

@@ -3,22 +3,21 @@ source("R/greedy.R")
 library(tidyverse)
 
 n <- 200
-sigma <- 0.2
-X <- runif(n, 0, 1)
+sigma <- 0.1
+X <- seq(0, 1, 1/200) #runif(n, 0, 1)
 epsilon <- rnorm(n, 0, sigma)
 Y <- sin(2*pi*X) + epsilon
 
-plot(X, Y)
 
 testtree <- greedy(
     matrix(X, ncol=1),
     matrix(Y, ncol=1)
 )
 
-X_hat <- seq(0, 1, 0.05)
+X_hat <- seq(0, 1, 0.01)
 Y_hat <- sapply(X_hat, \(x) testtree$decide(c(x)))
-plot(X_hat, Y_hat)
 
+testtree$plot_data()
 # iris <- as_tibble(iris)
 # iris
 # 

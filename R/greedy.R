@@ -47,8 +47,8 @@ minimize_risk <- function(tree, index, A_indices) {
             left_values <- A_X[,j] < s
             #if(all(!left_values)) next
             #if(all(left_values)) next
-            c1_hat <- 1/n * sum(Y[A_indices[left_values]])
-            c2_hat <- 1/n * sum(Y[A_indices[!left_values]])
+            c1_hat <- 1/sum(left_values) * sum(Y[A_indices[left_values]])
+            c2_hat <- 1/sum(!left_values) * sum(Y[A_indices[!left_values]])
             risk <- sum( (Y[A_indices[left_values]]  - c1_hat)**2 ) +
                     sum( (Y[A_indices[!left_values]] - c2_hat)**2 )
             if(risk < min_risk) {
@@ -63,8 +63,8 @@ minimize_risk <- function(tree, index, A_indices) {
     cat("j , s, risk ", min_j, min_s, min_risk, " \n")
     
     
-    y1 <- 1/n * sum(Y[A_indices[min_left_values]])
-    y2 <- 1/n * sum(Y[A_indices[!min_left_values]])
+    y1 <- 1/sum(min_left_values) * sum(Y[A_indices[min_left_values]])
+    y2 <- 1/sum(!min_left_values) * sum(Y[A_indices[!min_left_values]])
     
     return(list(j=min_j, s=min_s, y1=y1, y2=y2, left_values=min_left_values))
 }

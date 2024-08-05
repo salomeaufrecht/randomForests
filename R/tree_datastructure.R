@@ -127,6 +127,15 @@ Tree <- setRefClass(
             
             Y_hat <- sapply(X, \(x) .self$decide(c(x)))
             points(X, Y_hat)
+            plot_split_lines(1)
+        },
+        
+        plot_split_lines = function(index) {
+            if (is.na(index) || !.self$exists(index)) return()
+            abline(v=.self$data[index, "s"])
+            children <- get_child_indices(index)
+            plot_split_lines(children[1])
+            plot_split_lines(children[2])
         }
     )
 )

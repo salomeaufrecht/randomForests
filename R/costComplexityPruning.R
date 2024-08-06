@@ -1,6 +1,4 @@
-X <- 1:12
-Y <- 1:12
-#t <- greedy(    matrix(X, ncol=1),    matrix(Y, ncol=1))
+
 #' this is an example documentation
 #' 
 #' there are more tags...
@@ -10,35 +8,87 @@ Y <- 1:12
 #' 
 costComplexityPruning <- function(x) x
 
-getPruningSequence <- function(t0){
-    xMask <- getXMask(t0)
-    
-    
-    recPruningSequence(t0, xMask)
-    
+
+choosePLambda <- function(t0, lambda){
+    pruningSequence <- getPruningSequence(t0)
+    min_value <- .Machine$integer.max
+    tLambda <- NULL
+    for(t in pruningSequence){
+        val <- calcRisk(t) + lambda * length(t$getLeaves())
+        if(val<min_value) tLambda <- t
+    }
 }
 
-recPruningSequence <- function(t0, xMask){
+#' Pruning Sequence
+#' 
+#' calculates trees t(0), ..., t(p) according to weakest link pruning
+#' 
+#' @param t original tree
+#' @return list of trees t(0), ..., t(p)
+getPruningSequence <- function(t){
+    xMask <- getXMask(t)
+    possibleTrees <- getSubTrees(t)
+    recPruningSequence(t, xMask, possibleTrees)
+}
+
+
+#' Recursive Pruning Sequence
+#' 
+#' Recursive helper function for getPruningSequence(t)
+#' Not to be used other than in getPruningSequence(t)
+#' 
+#' @param t0 tree
+#' @param xMask see getXMask(t)
+#' @param possibleTrees list of subtrees of t0
+recPruningSequence <- function(t0, xMask, possibleTrees){
     if(t0$is_leaf(1)) return()
     risk_old <- calcRisk(t0, xMask)
     leaf_count_old <- length(t0$getLeaves())
     min_cost <- .Machine$integer.max
     tp <- NULL
-    possibleTrees <- getSubTrees(t0)
+    
     for (t in possibleTrees){
         risk_new <- calcRisk(t, xMask)
         leaf_count_new <- length(t$getLeaves())
         if(leaf_count_new==leaf_count_old) next
         cost <- (risk_new - risk_old) / (leaf_count_old - leaf_count_new)
-        cat("t, cost, min_cost", cost, min_cost, "\n")
         if(cost < min_cost){
             min_cost<- cost
             tp <- t
         }
     }
-    return(c(tp, recPruningSequence(tp, xMask)))
+    
+    possibleTrees <- getRemainingSubtrees(tp, possibleTrees)
+    return(c(tp, recPruningSequence(tp, xMask, possibleTrees)))
 }
 
+#' get remaining Subtrees
+#' 
+#' given a set of subtrees and a specific subtree t0 from this set. we now calculate 
+#' a subset of the subtrees in which all subtrees are subtrees of t0
+#' 
+#' @param t0 given tree
+#' @param possibleTrees set of all subtrees.
+#' @return set of all remaining subtrees (as list)
+#' 
+getRemainingSubtrees <- function(t0, possibleTrees){
+    nodes <- c(1,  t0$data[!is.na(t0$data[, 'y']), 'index'])
+    delTrees <- NULL
+    for (i in seq_along(possibleTrees)){
+        if (!all(possibleTrees[[i]]$data[!is.na(possibleTrees[[i]]$data[, 'y']), 'index'] %in% nodes)){
+            delTrees <- c(i, delTrees)
+        }
+    }
+    possibleTrees[delTrees] <- NULL
+    return(possibleTrees)
+}
+
+#' calculates Risk
+#' 
+#' calcualtes risk for a given tree
+#' 
+#' @param t tree
+#' @param xMask vektor with TRUE/FALSE mask for every node (leaf) for trainig_data_x. See getXMask(t)
 calcRisk <- function (t, xMask){
     if (t$type == "classification"){
         leaves <- t$getLeaves()
@@ -61,7 +111,7 @@ calcRisk <- function (t, xMask){
 
 #' Mask for X values
 #' 
-#' assignes TRUE/FALSE values for every x value for every node. TRUE when x is put into bucket of node when following split points
+#' assignes TRUE/FALSE values for every value from training_data_x for every node. TRUE when x is put into bucket of node (when following split points)
 getXMask <- function(t0){
     xMask <- list(0) #which x values 'go this way'
     xMask[[1]] <- rep(TRUE, nrow(t0$training_data_x))
@@ -112,37 +162,4 @@ recSubTrees <- function(t_original, t_sub){
     
 }
 
-#' creates array with corresponding y value for each node (if cut at this node)
-#' @param t tree
-#' @return array with y values t index positions of nodes
-buildPruningTree <- function(t){
-    childNodes <- t$getLeaves()
-    nodesValues <- NULL
-    nodesValues[childNodes] <- t$data[childNodes, 'y']
-    recPruningTree(t, childNodes, nodesValues)
-}
-
-#' recursive help function
-#' @param t tree
-#' @param childNodes array of indices currently seen as child nodes.
-#' @param nodesValues array of y values 
-recPruningTree <- function(t, childNodes, nodesValues){
-    root <- FALSE
-    nextChildren <- NULL
-    
-    for (child in childNodes){ #calc value for parent nodes
-        parent <- t$get_parent_index(child)
-        if(parent==0){
-            root <- TRUE
-            next
-        }
-        if(is.na(nodesValues[parent])){
-            nodesValues[parent] <- sum(nodesValues[t$get_child_indices(parent)])/2
-            nextChildren <- c(nextChildren, parent)
-            root <- FALSE
-        }
-    }
-    if(root) return(nodesValues)
-    recPruningTree(t, nextChildren, nodesValues)
-}
 

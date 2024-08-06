@@ -166,7 +166,16 @@ Tree <- setRefClass(
             return(.self[index][1, 's'])
         },
         
-        get_root = function() return(.self[1])
+        get_root = function() {return(.self[1])},
+        
+        f = function(x){
+            node=1
+            while (!.self$is_leaf(node)) {
+                children <- .self$get_child_indices(node)
+                node <- ifelse(.self$data[node, 's'] > x[.self$data[node, 'j']], children[1], children[2])
+            }
+            return(.self$data[node, 'y'])
+        }
     )
 )
 

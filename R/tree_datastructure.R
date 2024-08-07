@@ -44,7 +44,7 @@ Tree <- setRefClass(
         
         exists = function(index) {
             if (length(index) > 1) return(.self$all_exist(index))
-            if (index >= nrow(.self$data)) return(FALSE)
+            if (index > nrow(.self$data)) return(FALSE)
             return(any(!is.na(.self$data[index, 2:4])))
         },
         all_exist = function(indices) all(sapply(indices,.self$exists)),

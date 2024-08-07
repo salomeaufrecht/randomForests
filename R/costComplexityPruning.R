@@ -6,18 +6,82 @@
 #' @export costComplexityPruning
 #' @param x whatever
 #' 
-costComplexityPruning <- function(x) x
+costComplexityPruning <- function(t, lambda_min=1, lambda_max=100, lambda_step=1, plot=FALSE, m=10){
+    
+    
+    Im <- makePartition(t$training_data_x, m)
+    sequences <- NULL
+    cat("creating pruning sequence ")
+    for (i in 1:m){
+        cat(i, ",")
+        sequences[i] <- list(getPruningSequence(
+                                greedy(matrix(t$training_data_x[Im!=i]) , 
+                                       matrix(t$training_data_y[Im!=i]))))
+    }
+    cat("\nall pruning sequences created")
+    n <- length(t$training_data_x)
+    lambdas <- seq(lambda_min, lambda_max, lambda_step)
+    CVs <- NULL
+    best_lambda <- NULL
+    min_CV <- .Machine$integer.max
+    cat("checking lambda: ")
+    for (i in seq_along(lambdas)){
+        cat(lambdas[i], ",")
+        CVs[i] <- CV(lambdas[i], sequences, n, Im,t$training_data_x, t$training_data_y)
+    }
+    cat("\n")
+    if(plot) plot(lambdas, CVs)
+    lambda <- min(lambdas)
+    
+    cat("calculating resulting tree \n")
+    return(chooseTpLambda(lambda, getPruningSequence(t)))
+}
 
 
-choosePLambda <- function(t0, lambda){
-    pruningSequence <- getPruningSequence(t0)
+CV <- function(lambda, sequences, n, Im, training_data_x, training_data_y){
+    sum <- 0
+    for (m in seq_along(sequences)){
+        t <- chooseTpLambda(lambda, sequences[[m]])
+        inner_sum <- 0
+        for (i in (1:n)[Im==m]){
+            inner_sum <- inner_sum + L(t, training_data_y[i], t$f(training_data_x[i]))
+        }
+        sum <- sum + inner_sum
+    }
+    return((1/n) *sum)
+}
+
+L <- function(t, y, s){
+    if (t$type == "classification"){
+        return(ifelse(y!=s, 1, 0))
+    }
+    return((y-s)^2)
+}
+
+makePartition <- function(x, m=10){
+    n <- length(x)
+    size <- round(n/m)
+    part <- integer(n)
+    for (i in 1:(m-1)){
+        part[sample((1:n)[part==0], size = size, replace = FALSE)] <- i
+    }
+    part[part==0] <- m
+    return(part)
+}
+
+chooseTpLambda <- function(lambda, pruningSequence){
     min_value <- .Machine$integer.max
     tLambda <- NULL
+    xMask <- getXMask(pruningSequence[[1]])
     for(t in pruningSequence){
-        val <- calcRisk(t) + lambda * length(t$getLeaves())
-        if(val<min_value) tLambda <- t
+        val <- calcRisk(t, xMask) + lambda * length(t$getLeaves())
+        if(val<min_value){
+            min_value <- val
+            tLambda <- t}
     }
+    return(tLambda)
 }
+
 
 #' Pruning Sequence
 #' 
@@ -28,7 +92,7 @@ choosePLambda <- function(t0, lambda){
 getPruningSequence <- function(t){
     xMask <- getXMask(t)
     possibleTrees <- getSubTrees(t)
-    recPruningSequence(t, xMask, possibleTrees)
+    return(c(t, recPruningSequence(t, xMask, possibleTrees)))
 }
 
 
@@ -89,24 +153,23 @@ getRemainingSubtrees <- function(t0, possibleTrees){
 #' 
 #' @param t tree
 #' @param xMask vektor with TRUE/FALSE mask for every node (leaf) for trainig_data_x. See getXMask(t)
-calcRisk <- function (t, xMask){
+calcRisk <- function (t, xMask=getXMask(t)){
+    risk <- 0
+    leaves <- t$getLeaves()
+    
     if (t$type == "classification"){
-        leaves <- t$getLeaves()
-        risk <- 0
         for(l in leaves){
-            risk <- risk+ sum((t$training_data_x[xMask[[l]]] != t$data[l, 'y']))/ sum(xMask[[l]])
+            risk <- risk+ sum((t$training_data_y[xMask[[l]]] != t$data[l, 'y']))#/ sum(xMask[[l]])
         }
-        return(risk)
     }
     else{
-        leaves <- t$getLeaves()
-        risk <- 0
         for(l in leaves){
-            risk <- risk+ sum((t$training_data_x[xMask[[l]]]-t$data[l, 'y'])^2)/ sum(xMask[[l]])
+            risk <- risk+ sum((t$training_data_y[xMask[[l]]]-t$data[l, 'y'])^2)#/ sum(xMask[[l]])
         }
-        return(risk)
     }
+    return(risk/length(t$training_data_x))
 }
+
 
 
 #' Mask for X values
@@ -129,7 +192,7 @@ getXMask <- function(t0){
 #' calculates all possible subtrees with same root like given tree (needed for pruning)
 #' @param t tree
 #' @return vector of subtrees 
-getSubTrees <- function(t){
+    getSubTrees <- function(t){
     t_sub <- Tree$new(t$training_data_x, t$training_data_y)
     t_sub$type <- t$type
     do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')])))

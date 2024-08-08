@@ -17,7 +17,8 @@ Tree <- setRefClass(
         d = "numeric",
         type = "character",
         training_data_x = "matrix",
-        training_data_y = "matrix"
+        training_data_y = "matrix",
+        risk = "numeric"
     ),
     methods = list(
         initialize = function(training_data_x, training_data_y, classificationType = FALSE) {
@@ -39,6 +40,7 @@ Tree <- setRefClass(
             t$data <- .self$data
             t$type <- .self$type
             t$d <- .self$d
+            t$risk <- .self$risk
             return(t)
         },
         
@@ -78,8 +80,9 @@ Tree <- setRefClass(
             return(indices)
         },
         
-        set_values = function(index, j=NA_integer_, s=NA_integer_, y=NA_integer_) {
+        set_values = function(index, j=NA_integer_, s=NA_integer_, y=NA_integer_, recalcRisk = TRUE) {
             .self$data[index,c('j', 's', 'y')] <- c( j, s, y)
+            if(recalcRisk) .self$calcRisk(force=TRUE)
         }, 
         
         get_children = function(index) {
@@ -87,22 +90,24 @@ Tree <- setRefClass(
             .self[indices]
         },
         
-        add_children = function(index, j1=NA_integer_, s1=NA_integer_, j2=NA_integer_, s2=NA_integer_, y1=NA_integer_, y2=NA_integer_) {
+        add_children = function(index, j1=NA_integer_, s1=NA_integer_, j2=NA_integer_, s2=NA_integer_, y1=NA_integer_, y2=NA_integer_, recalcRisk = TRUE) {
             stopifnot(all(sapply(c(j1, s1, j2, s2, y1, y2), is.numeric)))
             max_length <- nrow(.self$data)
             .self$extend(2*index + 1)
             .self$data[index*2, 2:4] <- c(j1, s1, y1)
             .self$data[index*2 + 1, 2:4] <- c(j2, s2, y2)
             return(c(index*2, index*2+1))
+            if(recalcRisk) .self$calcRisk(force=TRUE)
         },
         
-        delete = function(index) {
+        delete = function(index, recalcRisk = TRUE) {
             if (!.self$exists(index)) return()
             children = .self$get_children(index)
             .self$data[index, ] <- c(index,NA,NA)
             # Delete child nodes recursively
             if (!is.na(children[1])) .self$delete(children[1]$index)
             if (!is.na(children[2])) .self$delete(children[2]$index)
+            if(recalcRisk) .self$calcRisk(force=TRUE)
         },
         
         is_leaf = function(index) {
@@ -145,12 +150,7 @@ Tree <- setRefClass(
             plot_split_lines(children[1])
             plot_split_lines(children[2])
         },
-        getLeaves_correctTrees = function(){
-            data_ <- .self$data
-            leaves <- data_[is.na(data_[ ,'s']) & !is.na(data_[,'y']), 'index']
-            if(all(is.na(.self$get_child_indices(1)))) leaves <- c(1, leaves)
-            return(leaves)
-        },
+
         
         get_leaves = function(){
             data_ <- .self$data
@@ -165,9 +165,10 @@ Tree <- setRefClass(
         },
         
         
-        makeLeaf = function(index){
+        makeLeaf = function(index, recalcRisk = TRUE){
             .self$data[index, c('j', 's')] <- c(0, NA)
             if(is.na(.self$data[index, 'y'])) print("leave node with no y value")
+            if(recalcRisk) .self$calcRisk(force=TRUE)
             #TODO delete children
         },
         
@@ -184,7 +185,42 @@ Tree <- setRefClass(
                 node <- ifelse(.self$data[node, 's'] > x[.self$data[node, 'j']], children[1], children[2])
             }
             return(unname(.self$data[node, 'y']))
+        },
+        
+        calcRisk = function(xMask=.self$getXMask(), force=FALSE){
+            if(!is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
+            risk_ <- 0
+            leaves <- .self$get_leaves()
+            
+            if (.self$type == "classification"){
+                for(l in leaves){
+                    risk_ <- risk_+ sum((.self$training_data_y[xMask[[l]]] != .self$data[l, 'y']))
+                }
+            }
+            else{
+                for(l in leaves){
+                    risk_ <- risk_+ sum((.self$training_data_y[xMask[[l]]]-.self$data[l, 'y'])^2)
+                }
+            }
+            risk_ <- risk_/length(.self$training_data_x)
+            .self$risk <- risk_
+            return(risk_)
+        },
+        
+        getXMask = function(){
+            xMask <- list(0) #which x values 'go this way'
+            xMask[[1]] <- rep(TRUE, nrow(.self$training_data_x))
+            parents <- .self$data[!is.na(.self$data[, 's']), 'index']
+            parents <- parents[!parents %in% .self$get_leaves()]
+            for(p in parents){
+                child_indices <- .self$get_child_indices(p)
+                xMask[[child_indices[1]]] <- .self$training_data_x < .self$data[p, 's'] & xMask[[p]]
+                xMask[[child_indices[2]]] <- !xMask[[child_indices[1]]] & xMask[[p]]
+            }
+            return(xMask)
         }
+        
+        
     )
 )
 

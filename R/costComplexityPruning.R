@@ -10,18 +10,14 @@ costComplexityPruning <- function(t, lambda_min=1, lambda_max=100, lambda_step=1
     
     stopifnot("m need to be greater 1"= m>=2)
     Im <- makePartition(t$training_data_x, m)
-    sequences <- NULL
-    sequencesRisk <- NULL
+    sequences <- list(0)
     
     if(print_progress)cat("creating pruning sequence ")
     for (i in 1:m){
         if(print_progress)cat(i, ",")
-        trees_risk <- (getPruningSequence(
+        sequences[[i]] <- (getPruningSequence(
                                 greedy(matrix(t$training_data_x[Im!=i]) , 
                                        matrix(t$training_data_y[Im!=i]))))
-        sequences[i] <- list(trees_risk$trees)
-        sequencesRisk[[i]] <- trees_risk$risk
-        rm(trees_risk)  
     }
     
     if(print_progress) cat("\nall pruning sequences created\n")
@@ -33,22 +29,22 @@ costComplexityPruning <- function(t, lambda_min=1, lambda_max=100, lambda_step=1
     if(print_progress) cat("checking lambda: ")
     for (i in seq_along(lambdas)){
         if(print_progress) cat(lambdas[i], ",")
-        CVs[i] <- CV(lambdas[i], sequences, sequencesRisk, n, Im,t$training_data_x, t$training_data_y)
+        CVs[i] <- CV(lambdas[i], sequences, n, Im,t$training_data_x, t$training_data_y)
     }
     if(print_progress) cat("\n")
     if(plot) plot(lambdas, CVs)
     lambda <- lambdas[which.min(CVs)]
     if(print_progress) cat("chosen lambda: ", lambda, "\n")
     if(print_progress) cat("calculating resulting tree \n")
-    trees_risk_t <- getPruningSequence(t)
-    return(chooseTpLambda(lambda, trees_risk_t$trees, trees_risk_t$risk))
+
+    return(chooseTpLambda(lambda, getPruningSequence(t)))
 }
 
 
-CV <- function(lambda, sequences, sequencesRisk, n, Im, training_data_x, training_data_y){
+CV <- function(lambda, sequences, n, Im, training_data_x, training_data_y){
     sum <- 0
     for (m in seq_along(sequences)){
-        t <- chooseTpLambda(lambda, sequences[[m]], sequencesRisk[[m]])
+        t <- chooseTpLambda(lambda, sequences[[m]])
         inner_sum <- 0
         for (i in (1:n)[Im==m]){
             inner_sum <- inner_sum + L(t, training_data_y[i], t$f(training_data_x[i]))
@@ -76,12 +72,12 @@ makePartition <- function(x, m=10){
     return(part)
 }
 
-chooseTpLambda <- function(lambda, pruningSequence, pruningSequenceRisk){
+chooseTpLambda <- function(lambda, pruningSequence){
     min_value <- .Machine$integer.max
     tLambda <- NULL
-    for(i in seq_along(pruningSequence)){
-        t <- pruningSequence[[i]]$copy()
-        val <- pruningSequenceRisk[[i]] + lambda * length(t$get_leaves())
+    print(pruningSequence)
+    for(t in pruningSequence){
+        val <- t$calcRisk() + lambda * length(t$get_leaves())
         if(val<min_value){
             min_value <- val
             tLambda <- t$copy()
@@ -98,14 +94,9 @@ chooseTpLambda <- function(lambda, pruningSequence, pruningSequenceRisk){
 #' @param t original tree
 #' @return list of trees t(0), ..., t(p)
 getPruningSequence <- function(t){
-    xMask <- getXMask(t)
     possibleTrees <- getSubTrees(t)
-    possibleTreesRisk <- list(0)
-    for (i in seq_along(possibleTrees)) possibleTreesRisk[[i]] <- calcRisk(possibleTrees[[i]], xMask)
-    risk <- possibleTreesRisk[[1]]
-    trees_risk <- recPruningSequence(t, risk, possibleTrees, possibleTreesRisk)
-    return(list(trees=c(t, trees_risk$trees), 
-                risk=c(risk, trees_risk$risk)) )
+
+    return(c(t, recPruningSequence(t,  possibleTrees)))
 }
 
 
@@ -117,31 +108,26 @@ getPruningSequence <- function(t){
 #' @param t0 tree
 #' @param xMask see getXMask(t)
 #' @param possibleTrees list of subtrees of t0
-recPruningSequence <- function(t0, t0_risk, possibleTrees, possibleTreesRisk){
+recPruningSequence <- function(t0, possibleTrees){
     if(t0$is_leaf(1)) return()
     leaf_count_old <- length(t0$get_leaves())
     min_cost <- .Machine$integer.max
-    tp_index <- NULL
-    
-    for (i in seq_along(possibleTrees)){
-        risk_new <- possibleTreesRisk[[i]]
-        leaf_count_new <- length(possibleTrees[[i]]$get_leaves())
+ 
+    for (t in possibleTrees){
+        leaf_count_new <- length(t$get_leaves())
         if(leaf_count_new==leaf_count_old) next
-        cost <- (risk_new - t0_risk) / (leaf_count_old - leaf_count_new)
+        
+        cost <- (t$calcRisk() - t0$calcRisk()) / (leaf_count_old - leaf_count_new)
+        
         if(cost < min_cost){
             min_cost<- cost
-            tp_index <- i
+            tp <- t$copy()
         }
     }
     
-    tp <- possibleTrees[[tp_index]]$copy()
-    risk <- possibleTreesRisk[[tp_index]]
-    remaining <- getRemainingSubtrees(tp, possibleTrees, possibleTreesRisk)
-    possibleTrees <- remaining$trees
-    possibleTreesRisk <- remaining$risk
-    trees_risk <- recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)
-    return(list(trees=c(list(tp), trees_risk$trees), 
-                risk=c(risk, trees_risk$risk)) )
+
+    possibleTrees <- getRemainingSubtrees(tp, possibleTrees)
+    return(c(list(tp), recPruningSequence(tp, possibleTrees)))
 }
 
 #' get remaining Subtrees
@@ -153,7 +139,7 @@ recPruningSequence <- function(t0, t0_risk, possibleTrees, possibleTreesRisk){
 #' @param possibleTrees set of all subtrees.
 #' @return set of all remaining subtrees (as list)
 #' 
-getRemainingSubtrees <- function(t0, possibleTrees, possibleTreesRisk){
+getRemainingSubtrees <- function(t0, possibleTrees ){
     nodes <- c(1,  t0$data[!is.na(t0$data[, 'y']), 'index'])
     delTrees <- NULL
     for (i in seq_along(possibleTrees)){
@@ -162,50 +148,10 @@ getRemainingSubtrees <- function(t0, possibleTrees, possibleTreesRisk){
         }
     }
     possibleTrees[delTrees] <- NULL
-    possibleTreesRisk[delTrees] <- NULL
-    return(list(trees=possibleTrees, risk=possibleTreesRisk))
-}
-
-#' calculates Risk
-#' 
-#' calcualtes risk for a given tree
-#' 
-#' @param t tree
-#' @param xMask vektor with TRUE/FALSE mask for every node (leaf) for trainig_data_x. See getXMask(t)
-calcRisk <- function (t, xMask=getXMask(t)){
-    risk <- 0
-    leaves <- t$get_leaves()
-    
-    if (t$type == "classification"){
-        for(l in leaves){
-            risk <- risk+ sum((t$training_data_y[xMask[[l]]] != t$data[l, 'y']))#/ sum(xMask[[l]])
-        }
-    }
-    else{
-        for(l in leaves){
-            risk <- risk+ sum((t$training_data_y[xMask[[l]]]-t$data[l, 'y'])^2)#/ sum(xMask[[l]])
-        }
-    }
-    return(risk/length(t$training_data_x))
+    return(possibleTrees)
 }
 
 
-
-#' Mask for X values
-#' 
-#' assignes TRUE/FALSE values for every value from training_data_x for every node. TRUE when x is put into bucket of node (when following split points)
-getXMask <- function(t0){
-    xMask <- list(0) #which x values 'go this way'
-    xMask[[1]] <- rep(TRUE, nrow(t0$training_data_x))
-    parents <- t0$data[!is.na(t0$data[, 's']), 'index']
-    parents <- parents[!parents %in% t0$get_leaves()]
-    for(p in parents){
-        child_indices <- t0$get_child_indices(p)
-        xMask[[child_indices[1]]] <- t0$training_data_x < t0$data[p, 's'] & xMask[[p]]
-        xMask[[child_indices[2]]] <- !xMask[[child_indices[1]]] & xMask[[p]]
-    }
-    return(xMask)
-}
 
 #' Get possible subtrees
 #' 
@@ -215,9 +161,11 @@ getXMask <- function(t0){
 getSubTrees <- function(t){
     t_sub <- Tree$new(t$training_data_x, t$training_data_y)
     t_sub$type <- t$type
-    do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')])))
-    if(is.na(t_sub$data[1, 'y'])) t_sub$data[1, 'y'] <- sum(t$training_data_x)/length(t$training_data_x)
+    do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')]), list(recalcRisk=FALSE)))
+    if(is.na(t_sub$data[1, 'y'])) t_sub$data[1, 'y'] <- sum(t$training_data_x)/length(t$training_data_x) #set missing y value for root
     subtrees <- recSubTrees(t, t_sub)
+    xMask <- subtrees[[1]]$getXMask()
+    for(s in subtrees) s$calcRisk(xMask, force=TRUE)
     return(subtrees)
 }
 
@@ -232,13 +180,12 @@ recSubTrees <- function(t_original, t_sub){
         if(is.na(t_sub$getS(l))) next #node marked as leaf
         if (all(is.na(leafChildren))) next
         
-        
         t_one <- t_sub$copy()
-        
         t_one$add_children(index=l, 
                            s1=leafChildren[[1]][1, 's'], j1=leafChildren[[1]][1, 'j'], y1=leafChildren[[1]][1, 'y'], 
-                           s2=leafChildren[[2]][1, 's'], j2=leafChildren[[2]][1, 'j'], y2=leafChildren[[2]][1, 'y'])
-        t_sub$makeLeaf(l)
+                           s2=leafChildren[[2]][1, 's'], j2=leafChildren[[2]][1, 'j'], y2=leafChildren[[2]][1, 'y'],
+                           recalcRisk = FALSE)
+        t_sub$makeLeaf(l, recalcRisk = FALSE)
         return (c(recSubTrees(t_original, t_one), recSubTrees(t_original, t_sub)))
     }
     return(t_sub)

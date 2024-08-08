@@ -30,15 +30,13 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
     }
     
     if(print_progress) cat("\nall pruning sequences created\n")
-    n <- length(t$training_data_x)
+ 
     lambdas <- seq(lambda_min, lambda_max, lambda_step)
     CVs <- NULL
-    best_lambda <- NULL
-    min_CV <- .Machine$integer.max
     if(print_progress) cat("checking lambda: ")
     for (i in seq_along(lambdas)){
         if(print_progress) cat(lambdas[i], ",")
-        CVs[i] <- CV(lambdas[i], sequences, n, Im,t$training_data_x, t$training_data_y)
+        CVs[i] <- CV(lambdas[i], sequences, Im,t$training_data_x, t$training_data_y)
     }
     if(print_progress) cat("\n")
     if(plot) plot(lambdas, CVs)
@@ -61,12 +59,12 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
 #' @param training_data_x The training data.
 #' @param training_data_y The training data.
 #' @return The cross-validation error for the given \eqn{\lambda}.
-CV <- function(lambda, sequences, n, Im, training_data_x, training_data_y){
+CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
     sum <- 0
     for (m in seq_along(sequences)){
         t <- choose_tp_lambda(lambda, sequences[[m]])
         inner_sum <- 0
-        for (i in (1:n)[Im==m]){
+        for (i in which(Im == m)){
             inner_sum <- inner_sum + L(t, training_data_y[i], t$f(training_data_x[i]))
         }
         sum <- sum + inner_sum
@@ -118,7 +116,7 @@ make_partition <- function(x, m=10){
 #' @param pruning_sequence A list of subtrees generated during the pruning process.
 #' @return The subtree that minimizes the cost-complexity criterion.
 choose_tp_lambda <- function(lambda, pruning_sequence){
-    min_value <- .Machine$integer.max
+    min_value <- Inf 
     tLambda <- NULL
     for(t in pruning_sequence){
         val <- t$calc_risk() + lambda * length(t$get_leaves())
@@ -157,7 +155,7 @@ get_pruning_sequence <- function(t){
 rec_pruning_sequence <- function(t0, possible_trees){
     if(t0$is_leaf(1)) return()
     leaf_count_old <- length(t0$get_leaves())
-    min_cost <- .Machine$integer.max
+    min_cost <- Inf
  
     for (t in possible_trees){
         leaf_count_new <- length(t$get_leaves())

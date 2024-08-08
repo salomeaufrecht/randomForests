@@ -152,18 +152,18 @@ Tree <- setRefClass(
             return(leaves)
         },
         
-        getLeaves = function(){
-            recLeaves(1)},
-        
-        recLeaves = function(node){
-            if(!.self$is_leaf(node)){
-                return (c(recLeaves(.self$get_child_indices(node)[1]),
-                          recLeaves(.self$get_child_indices(node)[2])))
+        get_leaves = function(){
+            data_ <- .self$data
+            nodes <-  data_[!is.na(data_[,'y']), 'index']
+            if(is.na(data_[1, 'y'])) nodes <- c(1, nodes)
+            leaves <- nodes[is.na(data_[nodes, 's'])]
+            pot_leaves_with_s <- nodes[!is.na(data_[nodes, 's'])]
+            for (pl in pot_leaves_with_s){
+                if(all(is.na(.self$get_child_indices(pl)))) leaves <- c(leaves, pl)
             }
-            else return(node)
+            return(as.numeric(leaves))
         },
         
-
         
         makeLeaf = function(index){
             .self$data[index, c('j', 's')] <- c(0, NA)
@@ -183,7 +183,7 @@ Tree <- setRefClass(
                 children <- .self$get_child_indices(node)
                 node <- ifelse(.self$data[node, 's'] > x[.self$data[node, 'j']], children[1], children[2])
             }
-            return(.self$data[node, 'y'])
+            return(unname(.self$data[node, 'y']))
         }
     )
 )

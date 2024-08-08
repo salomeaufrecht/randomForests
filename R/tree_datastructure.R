@@ -110,6 +110,7 @@ Tree <- setRefClass(
             if(recalcRisk) .self$calc_risk(force=TRUE)
         },
         
+        #' test
         is_leaf = function(index) {
             if (!.self$exists(index)) stop("Node does not exist.")
             return(all(is.na(.self$get_child_indices(index))))

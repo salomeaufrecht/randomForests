@@ -3,6 +3,7 @@
 #'
 #' This function performs cost-complexity pruning on a decision tree using cross-validation to select the optimal complexity parameter (\eqn{\lambda}).
 #'
+#' @export
 #' @param t The original decision tree to be pruned.
 #' @param m Number of partitions to create for cross-validation. Default is 10.
 #' @param lambda_min Minimum value for the complexity parameter \eqn{\lambda}. Default is 1.

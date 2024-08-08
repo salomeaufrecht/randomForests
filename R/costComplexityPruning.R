@@ -76,12 +76,13 @@ makePartition <- function(x, m=10){
 chooseTpLambda <- function(lambda, pruningSequence, pruningSequenceRisk){
     min_value <- .Machine$integer.max
     tLambda <- NULL
-    xMask <- getXMask(pruningSequence[[1]])
     for(i in seq_along(pruningSequence)){
-        val <- pruningSequenceRisk[[i]] + lambda * length(pruningSequence[[i]]$getLeaves())
+        t <- pruningSequence[[i]]
+        val <- pruningSequenceRisk[[i]] + lambda * length(t$getLeaves())
         if(val<min_value){
             min_value <- val
-            tLambda <- t}
+            tLambda <- t
+            }
     }
     return(tLambda)
 }
@@ -135,8 +136,9 @@ recPruningSequence <- function(t0, t0_risk, possibleTrees, possibleTreesRisk){
     remaining <- getRemainingSubtrees(tp, possibleTrees, possibleTreesRisk)
     possibleTrees <- remaining$trees
     possibleTreesRisk <- remaining$risk
-    return(list(trees=c(tp, recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)$trees), 
-                risk=c(risk, recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)$risk)) )
+    trees_risk <- recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)
+    return(list(trees=c(list(tp), trees_risk$trees), 
+                risk=c(risk, trees_risk$risk)) )
 }
 
 #' get remaining Subtrees

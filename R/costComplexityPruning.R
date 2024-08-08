@@ -8,15 +8,18 @@
 #' 
 costComplexityPruning <- function(t, lambda_min=1, lambda_max=100, lambda_step=1, plot=FALSE, m=10){
     
-    
+    stopifnot("m need to be greater 1"= m>=2)
     Im <- makePartition(t$training_data_x, m)
     sequences <- NULL
+    sequencesRisk <- NULL
     cat("creating pruning sequence ")
     for (i in 1:m){
         cat(i, ",")
-        sequences[i] <- list(getPruningSequence(
+        trees_risk <- (getPruningSequence(
                                 greedy(matrix(t$training_data_x[Im!=i]) , 
                                        matrix(t$training_data_y[Im!=i]))))
+        sequences[i] <- list(trees_risk$trees)
+        sequencesRisk[[i]] <- trees_risk$risk
     }
     cat("\nall pruning sequences created\n")
     n <- length(t$training_data_x)
@@ -27,21 +30,22 @@ costComplexityPruning <- function(t, lambda_min=1, lambda_max=100, lambda_step=1
     cat("checking lambda: ")
     for (i in seq_along(lambdas)){
         cat(lambdas[i], ",")
-        CVs[i] <- CV(lambdas[i], sequences, n, Im,t$training_data_x, t$training_data_y)
+        CVs[i] <- CV(lambdas[i], sequences, sequencesRisk, n, Im,t$training_data_x, t$training_data_y)
     }
     cat("\n")
     if(plot) plot(lambdas, CVs)
     lambda <- min(lambdas)
     
     cat("calculating resulting tree \n")
-    return(chooseTpLambda(lambda, getPruningSequence(t)))
+    trees_risk_t <- getPruningSequence(t)
+    return(chooseTpLambda(lambda, trees_risk_t$trees, trees_risk_t$risk))
 }
 
 
-CV <- function(lambda, sequences, n, Im, training_data_x, training_data_y){
+CV <- function(lambda, sequences, sequencesRisk, n, Im, training_data_x, training_data_y){
     sum <- 0
     for (m in seq_along(sequences)){
-        t <- chooseTpLambda(lambda, sequences[[m]])
+        t <- chooseTpLambda(lambda, sequences[[m]], sequencesRisk[[m]])
         inner_sum <- 0
         for (i in (1:n)[Im==m]){
             inner_sum <- inner_sum + L(t, training_data_y[i], t$f(training_data_x[i]))
@@ -94,7 +98,10 @@ getPruningSequence <- function(t){
     possibleTrees <- getSubTrees(t)
     possibleTreesRisk <- list(0)
     for (i in seq_along(possibleTrees)) possibleTreesRisk[[i]] <- calcRisk(possibleTrees[[i]], xMask)
-    return(c(t, recPruningSequence(t, possibleTreesRisk[[1]], possibleTrees, possibleTreesRisk)))
+    risk <- possibleTreesRisk[[1]]
+    #return(c(t, recPruningSequence(t, risk, possibleTrees, possibleTreesRisk)))
+    return(list(trees=c(t, recPruningSequence(t, risk, possibleTrees, possibleTreesRisk)$trees), 
+                risk=c(risk, recPruningSequence(t, risk, possibleTrees, possibleTreesRisk)$risk)) )
 }
 
 
@@ -128,7 +135,8 @@ recPruningSequence <- function(t0, t0_risk, possibleTrees, possibleTreesRisk){
     remaining <- getRemainingSubtrees(tp, possibleTrees, possibleTreesRisk)
     possibleTrees <- remaining$trees
     possibleTreesRisk <- remaining$risk
-    return(c(tp, recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)))
+    return(list(trees=c(tp, recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)$trees), 
+                risk=c(risk, recPruningSequence(tp, risk, possibleTrees, possibleTreesRisk)$risk)) )
 }
 
 #' get remaining Subtrees
@@ -198,7 +206,7 @@ getXMask <- function(t0){
 #' calculates all possible subtrees with same root like given tree (needed for pruning)
 #' @param t tree
 #' @return vector of subtrees 
-    getSubTrees <- function(t){
+getSubTrees <- function(t){
     t_sub <- Tree$new(t$training_data_x, t$training_data_y)
     t_sub$type <- t$type
     do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')])))

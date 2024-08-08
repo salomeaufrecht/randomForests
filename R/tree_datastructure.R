@@ -146,16 +146,11 @@ Tree <- setRefClass(
             plot_split_lines(children[2])
         },
         getLeaves = function(){
-            recLeaves(1)
+            data_ <- .self$data
+            return(data_[is.na(data_[,'s']) & !is.na(data_[,'y']), 'index'])
         },
         
-        recLeaves = function(node){
-            if(!.self$is_leaf(node)){
-                return (c(recLeaves(.self$get_child_indices(node)[1]),
-                          recLeaves(.self$get_child_indices(node)[2])))
-            }
-            else return(node)
-        },
+
         
         makeLeaf = function(index){
             .self$data[index, c('j', 's')] <- c(0, NA)

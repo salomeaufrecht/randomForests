@@ -23,8 +23,8 @@ get_t_star <- function(t, lambda=1){
     sample_indices <- get_bootstrap_sample(t)
     t_star <- greedy(matrix(t$training_data_x[sample_indices,]), matrix(t$training_data_y[sample_indices,]))
     if (t$type=="classification")  return(t_star)
-    trees_risk_t <- getPruningSequence(t_star)
-    t_star_pruned <- chooseTpLambda(lambda, trees_risk_t$trees, trees_risk_t$risk)
+    trees_risk_t <- get_pruning_sequence(t_star)
+    t_star_pruned <- choose_tp_lambda(lambda, trees_risk_t$trees, trees_risk_t$risk)
     return(t_star_pruned)
 }
 

@@ -82,7 +82,7 @@ Tree <- setRefClass(
         
         set_values = function(index, j=NA_integer_, s=NA_integer_, y=NA_integer_, recalcRisk = TRUE) {
             .self$data[index,c('j', 's', 'y')] <- c( j, s, y)
-            if(recalcRisk) .self$calcRisk(force=TRUE)
+            if(recalcRisk) .self$calc_risk(force=TRUE)
         }, 
         
         get_children = function(index) {
@@ -97,7 +97,7 @@ Tree <- setRefClass(
             .self$data[index*2, 2:4] <- c(j1, s1, y1)
             .self$data[index*2 + 1, 2:4] <- c(j2, s2, y2)
             return(c(index*2, index*2+1))
-            if(recalcRisk) .self$calcRisk(force=TRUE)
+            if(recalcRisk) .self$calc_risk(force=TRUE)
         },
         
         delete = function(index, recalcRisk = TRUE) {
@@ -107,7 +107,7 @@ Tree <- setRefClass(
             # Delete child nodes recursively
             if (!is.na(children[1])) .self$delete(children[1]$index)
             if (!is.na(children[2])) .self$delete(children[2]$index)
-            if(recalcRisk) .self$calcRisk(force=TRUE)
+            if(recalcRisk) .self$calc_risk(force=TRUE)
         },
         
         is_leaf = function(index) {
@@ -165,14 +165,13 @@ Tree <- setRefClass(
         },
         
         
-        makeLeaf = function(index, recalcRisk = TRUE){
+        mark_leave = function(index, recalcRisk = TRUE){
             .self$data[index, c('j', 's')] <- c(0, NA)
-            if(is.na(.self$data[index, 'y'])) print("leave node with no y value")
-            if(recalcRisk) .self$calcRisk(force=TRUE)
-            #TODO delete children
+            if(is.na(.self$data[index, 'y'])) stop("leave node with no y value")
+            if(recalcRisk) .self$calc_risk(force=TRUE)
         },
         
-        getS = function(index){
+        get_s = function(index){
             return(.self[index][1, 's'])
         },
         
@@ -187,19 +186,19 @@ Tree <- setRefClass(
             return(unname(.self$data[node, 'y']))
         },
         
-        calcRisk = function(xMask=.self$getXMask(), force=FALSE){
+        calc_risk = function(x_mask=.self$get_x_mask(), force=FALSE){
             if(!is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
             risk_ <- 0
             leaves <- .self$get_leaves()
             
             if (.self$type == "classification"){
                 for(l in leaves){
-                    risk_ <- risk_+ sum((.self$training_data_y[xMask[[l]]] != .self$data[l, 'y']))
+                    risk_ <- risk_+ sum((.self$training_data_y[x_mask[[l]]] != .self$data[l, 'y']))
                 }
             }
             else{
                 for(l in leaves){
-                    risk_ <- risk_+ sum((.self$training_data_y[xMask[[l]]]-.self$data[l, 'y'])^2)
+                    risk_ <- risk_+ sum((.self$training_data_y[x_mask[[l]]]-.self$data[l, 'y'])^2)
                 }
             }
             risk_ <- risk_/length(.self$training_data_x)
@@ -207,17 +206,17 @@ Tree <- setRefClass(
             return(risk_)
         },
         
-        getXMask = function(){
-            xMask <- list(0) #which x values 'go this way'
-            xMask[[1]] <- rep(TRUE, nrow(.self$training_data_x))
+        get_x_mask = function(){
+            x_mask <- list(0) #which x values 'go this way'
+            x_mask[[1]] <- rep(TRUE, nrow(.self$training_data_x))
             parents <- .self$data[!is.na(.self$data[, 's']), 'index']
             parents <- parents[!parents %in% .self$get_leaves()]
             for(p in parents){
                 child_indices <- .self$get_child_indices(p)
-                xMask[[child_indices[1]]] <- .self$training_data_x < .self$data[p, 's'] & xMask[[p]]
-                xMask[[child_indices[2]]] <- !xMask[[child_indices[1]]] & xMask[[p]]
+                x_mask[[child_indices[1]]] <- .self$training_data_x < .self$data[p, 's'] & x_mask[[p]]
+                x_mask[[child_indices[2]]] <- !x_mask[[child_indices[1]]] & x_mask[[p]]
             }
-            return(xMask)
+            return(x_mask)
         }
         
         

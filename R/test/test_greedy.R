@@ -3,8 +3,8 @@ source("R/greedy.R")
 library(tidyverse)
 
 n <- 200
-sigma <- 0.1
-X <- seq(0, 1, 1/200) #runif(n, 0, 1)
+sigma <- 0
+X <- runif(n, 0, 1)
 epsilon <- rnorm(n, 0, sigma)
 Y <- sin(2*pi*X) + epsilon
 

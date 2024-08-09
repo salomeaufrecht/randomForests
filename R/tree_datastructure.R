@@ -18,6 +18,8 @@ Tree <- setRefClass(
         type = "character",
         training_data_x = "matrix",
         training_data_y = "matrix",
+        order_matrix = "matrix",
+        inverse_order_matrix = "matrix"
         risk = "numeric"
     ),
     methods = list(
@@ -31,6 +33,16 @@ Tree <- setRefClass(
             .self$d <- ncol(training_data_x)
             .self$training_data_x <- training_data_x
             .self$training_data_y <- training_data_y
+            
+            .self$order_matrix <- matrix(
+                sapply(1:d, \(x) order(training_data_x[, x])),
+                ncol = d
+            )
+            
+            .self$inverse_matrix <- matrix(
+                sapply(1:d, \(x) order(order_matrix[, x])),
+                ncol = d
+            )
         },
         
         depth = function(index) floor(log2(index)) + 1,

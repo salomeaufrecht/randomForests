@@ -15,8 +15,7 @@ greedy <- function(training_data_x, training_data_y) {
 
 new_tree <- function(tree, index, k, A_parent_indices) {
     A_parent_indices <- matrix(A_parent_indices, ncol=1)
-    print(nrow(A_parent_indices))
-    if(nrow(A_parent_indices) < 5 || k > 20) return()
+    if(nrow(A_parent_indices) < 5 || k > 10) return()
     min_values <- minimize_risk(tree, index, A_parent_indices) 
     tree[index] <- c(min_values$j, min_values$s)
     child_indices <- tree$add_children(index, y1=min_values$y1, y2=min_values$y2)
@@ -41,10 +40,15 @@ minimize_risk <- function(tree, index, A_indices) {
     Y <- tree$training_data_y
     
     for (j in 1:d) {
+        # order_perm <- tree$order_matrix[, j]
+        # sorted_A_X <- tree$training_data_x[order_perm, j][A_indices]
+        # print(sorted_A_X)
         # All sensible possible split values 
+        sorted_A_indices <- tree$order_matrix[]
         split_values <- A_X[-n, j] + (A_X[-1, j]-A_X[-n, j])/2
         for (s in split_values) {
-            left_values <- A_X[,j] < s
+            # left_values <- sorted_A_X < s
+            left_values <- A_X[, j] < s
             #if(all(!left_values)) next
             #if(all(left_values)) next
             c1_hat <- 1/sum(left_values) * sum(Y[A_indices[left_values]])
@@ -60,11 +64,10 @@ minimize_risk <- function(tree, index, A_indices) {
         }
     }
     
-    cat("j , s, risk ", min_j, min_s, min_risk, " \n")
-    
-    
     y1 <- 1/sum(min_left_values) * sum(Y[A_indices[min_left_values]])
     y2 <- 1/sum(!min_left_values) * sum(Y[A_indices[!min_left_values]])
     
+    # inverse_order_perm <- order(tree$order_matrix[, min_j])[A_indices]
+    # original_min_left_values <- min_left_values[inverse_order_perm]
     return(list(j=min_j, s=min_s, y1=y1, y2=y2, left_values=min_left_values))
 }

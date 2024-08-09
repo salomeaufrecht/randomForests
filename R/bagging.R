@@ -1,4 +1,16 @@
 
+#' Bagging for Decision Trees
+#'
+#' Implements bagging (Bootstrap Aggregating) for decision trees, supporting both regression and classification tasks.
+#'
+#' @export
+#' @param t The original decision tree.
+#' @param B The number of bootstrap samples to generate. Default is 10.
+#' @param lambda The complexity parameter for pruning in the case of regression trees. Default is 1.
+#' @return An ensemble model that combines the results of multiple bootstrapped decision trees.
+#' @examples
+#' # Assuming `tree` is an initialized decision tree object
+#' ensemble_model <- bagging(tree, B=20, lambda=0.5)
 
 bagging <- function(t, B=10, lambda=1){
     if (t$type == "classification")return( bagging_classification(t, B))

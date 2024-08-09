@@ -39,7 +39,7 @@ Tree <- setRefClass(
                 ncol = d
             )
             
-            .self$inverse_matrix <- matrix(
+            .self$inverse_order_matrix <- matrix(
                 sapply(1:d, \(x) order(order_matrix[, x])),
                 ncol = d
             )

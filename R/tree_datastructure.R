@@ -74,7 +74,7 @@ Tree <- setRefClass(
             if (length_new <= max_length) return()
             # TODO: Discuss if this warning is necessary
             warning("Max length exceeded. More space will be allocated.")
-            length_new <- 2 * max_length + 1 # 2 ^ ceiling(log2(length_new))
+            length_new <- 2 ^ ceiling(log2(length_new))
             new_matrix <- matrix(rep(NA_integer_, 4*length_new), ncol=4)
             new_matrix[1:max_length, ] <- .self$data[1:max_length, ]
             new_matrix[1:length_new, 1] <- 1:length_new

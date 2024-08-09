@@ -108,8 +108,8 @@ Tree <- setRefClass(
             .self$extend(2*index + 1)
             .self$data[index*2, 2:4] <- c(j1, s1, y1)
             .self$data[index*2 + 1, 2:4] <- c(j2, s2, y2)
-            return(c(index*2, index*2+1))
             if(recalcRisk) .self$calc_risk(force=TRUE)
+            return(c(index*2, index*2+1))
         },
         
         delete = function(index, recalcRisk = TRUE) {

@@ -19,7 +19,7 @@ Tree <- setRefClass(
         training_data_x = "matrix",
         training_data_y = "matrix",
         order_matrix = "matrix",
-        inverse_order_matrix = "matrix"
+        inverse_order_matrix = "matrix",
         risk = "numeric"
     ),
     methods = list(

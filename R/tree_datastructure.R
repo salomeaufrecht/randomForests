@@ -39,7 +39,7 @@ Tree <- setRefClass(
                 ncol = d
             )
             
-            .self$inverse_matrix <- matrix(
+            .self$inverse_order_matrix <- matrix(
                 sapply(1:d, \(x) order(order_matrix[, x])),
                 ncol = d
             )
@@ -74,7 +74,7 @@ Tree <- setRefClass(
             if (length_new <= max_length) return()
             # TODO: Discuss if this warning is necessary
             warning("Max length exceeded. More space will be allocated.")
-            length_new <- 2 * max_length + 1 # 2 ^ ceiling(log2(length_new))
+            length_new <- 2 ^ ceiling(log2(length_new))
             new_matrix <- matrix(rep(NA_integer_, 4*length_new), ncol=4)
             new_matrix[1:max_length, ] <- .self$data[1:max_length, ]
             new_matrix[1:length_new, 1] <- 1:length_new
@@ -108,8 +108,8 @@ Tree <- setRefClass(
             .self$extend(2*index + 1)
             .self$data[index*2, 2:4] <- c(j1, s1, y1)
             .self$data[index*2 + 1, 2:4] <- c(j2, s2, y2)
-            return(c(index*2, index*2+1))
             if(recalcRisk) .self$calc_risk(force=TRUE)
+            return(c(index*2, index*2+1))
         },
         
         delete = function(index, recalcRisk = TRUE) {

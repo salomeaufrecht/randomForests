@@ -19,7 +19,7 @@ Tree <- setRefClass(
         training_data_x = "matrix",
         training_data_y = "matrix",
         order_matrix = "matrix",
-        inverse_order_matrix = "matrix"
+        inverse_matrix = "matrix",
         risk = "numeric"
     ),
     methods = list(
@@ -128,12 +128,12 @@ Tree <- setRefClass(
             return(all(is.na(.self$get_child_indices(index))))
         },
         
-        decide = function(X) {
+        decide = function(x) {
             current_node <- 1
             while(!is_leaf(current_node)) {
                 j <- .self$data[current_node, "j"]
                 s <- .self$data[current_node, "s"]
-                if(X[j] < s) {
+                if(x[j] < s) {
                     current_node <- .self$get_child_indices(current_node)[1]
                 } else {
                 current_node <- .self$get_child_indices(current_node)[2]

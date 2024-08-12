@@ -146,7 +146,7 @@ Tree <- setRefClass(
                 current_node <- .self$get_child_indices(current_node)[2]
                 }
             }
-            .self$data[current_node, "y"]
+            return(unname(.self$data[current_node, "y"]))
         },
         
         get_length = function() {
@@ -215,7 +215,7 @@ Tree <- setRefClass(
             return(risk_)
         },
         
-        set_risk = function(risk) .self$risk <- risk,
+        set_risk = function(risk){ .self$risk <- risk},
          
         get_x_mask = function(){
             x_mask <- list(0) #which x values 'go this way'
@@ -287,9 +287,12 @@ setMethod(f = "show",
           signature = "Tree",
           definition = function(object) {
               cat("Tree\n")
+              (object$get_leaves()) |> unique() -> leaves
+              depth <- max(object$depth(leaves))
+              
               print(c(type=object$type,
-                      nodes=sum(!is.na(object$data[,2])),
-                      depth=object$d,
+                      nodes=sum(!is.na(object$data[,'y'])),
+                      depth=depth,
                       dimension=object$d),
               )
           }

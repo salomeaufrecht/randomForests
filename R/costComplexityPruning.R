@@ -14,8 +14,8 @@
 #' @return A pruned decision tree based on the optimal \eqn{\lambda} value.
 #' @examples
 #' # Assuming `tree` is an initialized decision tree object
-#' pruned_tree <- costComplexityPruning(tree, lambda_min=1, lambda_max=50, plot=TRUE)
-costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_step=1, plot=FALSE,  print_progress=FALSE){
+#' pruned_tree <- cost_complexity_pruning(tree, lambda_min=1, lambda_max=50, plot=TRUE)
+cost_complexity_pruning <- function(t, m=10, lambda_min=0.01, lambda_max=1, lambda_step=0.05, plot=FALSE,  print_progress=FALSE){
     
     stopifnot("m need to be greater 1"= m>=2)
     Im <- make_partition(t$training_data_x, m)
@@ -120,15 +120,15 @@ make_partition <- function(x, m=10){
 #' @return The subtree that minimizes the cost-complexity criterion.
 choose_tp_lambda <- function(lambda, pruning_sequence){
     min_value <- Inf 
-    tLambda <- NULL
+    t_lambda <- NULL
     for(t in pruning_sequence){
         val <- t$calc_risk() + lambda * length(t$get_leaves())
         if(val<min_value){
             min_value <- val
-            tLambda <- t$copy()
+            t_lambda <- t$copy()
             }
     }
-    return(tLambda)
+    return(t_lambda)
 }
 
 
@@ -146,10 +146,8 @@ get_pruning_sequence <- function(t){
     leaves_count <- sapply(possible_trees, function(x) length(t$get_leaves(subtree=x)))
     
     pruning_sequence_indices <- (1)
-    
     t0 <- 1
 
-    
     remaining_trees <- seq_along(possible_trees)
     while(any(possible_trees[[t0]]!=1)){
 
@@ -167,7 +165,6 @@ get_pruning_sequence <- function(t){
         pruning_sequence_indices <- c(pruning_sequence_indices, tp)
         t0 <- tp
         remaining_trees <- get_remaining_subtrees(possible_trees[[t0]], possible_trees, remaining_trees)
-
     }
     
     pruning_sequence <- list()

@@ -19,7 +19,7 @@ Tree <- setRefClass(
         training_data_x = "matrix",
         training_data_y = "matrix",
         order_matrix = "matrix",
-        inverse_matrix = "matrix",
+        inverse_order_matrix = "matrix",
         risk = "numeric"
     ),
     methods = list(
@@ -47,12 +47,22 @@ Tree <- setRefClass(
         
         depth = function(index) floor(log2(index)) + 1,
         
-        copy = function(){
+        copy = function(nodes=NULL){
             t <- Tree$new(.self$training_data_x, .self$training_data_y)
-            t$data <- .self$data
             t$type <- .self$type
             t$d <- .self$d
-            t$risk <- .self$risk
+            if(is.null(nodes)){
+                t$data <- .self$data
+                t$risk <- .self$risk
+            } else{
+                t$risk <- numeric(0)
+                if(length(nodes)==1){
+                    t$data <- matrix(.self$data[nodes, ], 
+                                                       ncol= 4, byrow=TRUE, 
+                                                       dimnames = list(c(1),names(.self$data[nodes, ])))
+                } else t$data <- .self$data[1:max(nodes), ]
+                
+            }
             return(t)
         },
         
@@ -72,8 +82,6 @@ Tree <- setRefClass(
         extend = function(length_new) {
             max_length <- nrow(.self$data)
             if (length_new <= max_length) return()
-            # TODO: Discuss if this warning is necessary
-            warning("Max length exceeded. More space will be allocated.")
             length_new <- 2 ^ ceiling(log2(length_new))
             new_matrix <- matrix(rep(NA_integer_, 4*length_new), ncol=4)
             new_matrix[1:max_length, ] <- .self$data[1:max_length, ]
@@ -88,7 +96,6 @@ Tree <- setRefClass(
             indices <- NA_integer_
             if (.self$exists(first_child_index)) indices <- first_child_index
             if (.self$exists(first_child_index+1)) indices <- c(indices, first_child_index+1)
-            if (all(is.na(indices))) warning("Node is leaf node")
             return(indices)
         },
         
@@ -165,9 +172,10 @@ Tree <- setRefClass(
         },
 
         
-        get_leaves = function(){
+        get_leaves = function(subtree=NULL){
+            if(!is.null(subtree)) return(subtree[! subtree %in% .self$get_parent_index(subtree)])
             data_ <- .self$data
-            nodes <-  data_[!is.na(data_[,'y']), 'index']
+            nodes <- which(!is.na(data_[ ,'y']))
             if(is.na(data_[1, 'y'])) nodes <- c(1, nodes)
             leaves <- nodes[is.na(data_[nodes, 's'])]
             pot_leaves_with_s <- nodes[!is.na(data_[nodes, 's'])]
@@ -199,10 +207,11 @@ Tree <- setRefClass(
             return(unname(.self$data[node, 'y']))
         },
         
-        calc_risk = function(x_mask=.self$get_x_mask(), force=FALSE){
-            if(!is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
+        calc_risk = function(x_mask=.self$get_x_mask(), force=FALSE, subtree=NULL){
+            if(is.null(subtree) && !is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
             risk_ <- 0
-            leaves <- .self$get_leaves()
+            if(is.null(subtree))leaves <- .self$get_leaves()
+            else leaves <- subtree[! subtree %in% .self$get_parent_index(subtree)]
             
             if (.self$type == "classification"){
                 for(l in leaves){
@@ -215,10 +224,12 @@ Tree <- setRefClass(
                 }
             }
             risk_ <- risk_/length(.self$training_data_x)
-            .self$risk <- risk_
+            if(is.null(subtree)) .self$risk <- risk_
             return(risk_)
         },
         
+        set_risk = function(risk) .self$risk <- risk,
+         
         get_x_mask = function(){
             x_mask <- list(0) #which x values 'go this way'
             x_mask[[1]] <- rep(TRUE, nrow(.self$training_data_x))

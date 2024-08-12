@@ -20,7 +20,6 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
     stopifnot("m need to be greater 1"= m>=2)
     Im <- make_partition(t$training_data_x, m)
     sequences <- list(0)
-    
     if(print_progress)cat("creating pruning sequence ")
     for (i in 1:m){
         if(print_progress)cat(i, ",")
@@ -133,83 +132,48 @@ choose_tp_lambda <- function(lambda, pruning_sequence){
 }
 
 
+
 #' Generate Pruning Sequence
 #'
 #' Generates a sequence of subtrees using weakest link pruning from the original tree.
 #'
-#' @export
 #' @param t The original decision tree.
 #' @return A list of subtrees representing the pruning sequence (t(0), ..., t(p)).
 get_pruning_sequence <- function(t){
     possible_trees <- get_sub_trees(t)
-    return(c(t, rec_pruning_sequence(t,  possible_trees)))
-}
-
-
-#' Recursive Pruning Sequence
-#'
-#' Should not be used by itself!
-#' 
-#' A helper function that recursively generates the pruning sequence for the given tree.
-#'
-#' @param t0 The current tree in the pruning process.
-#' @param possible_trees A list of possible subtrees that can be generated from the current tree.
-#' @return A list of subtrees in the pruning sequence.
-
-rec_pruning_sequence <- function(t0, possible_trees){
-    if(t0$is_leaf(1)) return()
-    leaf_count_old <- length(t0$get_leaves())
-    min_cost <- Inf
- 
-    for (t in possible_trees){
-        leaf_count_new <- length(t$get_leaves())
-        if(leaf_count_new==leaf_count_old) next
-        
-        cost <- (t$calc_risk() - t0$calc_risk()) / (leaf_count_old - leaf_count_new)
-        
-        if(cost < min_cost){
-            min_cost<- cost
-            tp <- t
-        }
-    }
+    x_mask <- t$get_x_mask()
+    risks <- sapply(possible_trees, function(x) t$calc_risk(x_mask=x_mask, subtree=x))
+    leaves_count <- sapply(possible_trees, function(x) length(t$get_leaves(subtree=x)))
     
-
-    possible_trees <- get_remaining_subtrees(tp, possible_trees)
-    return(c(list(tp), rec_pruning_sequence(tp, possible_trees)))
-}
-
-
-#' Generate Pruning Sequence
-#'
-#' Generates a sequence of subtrees using weakest link pruning from the original tree.
-#'
-#' @param t The original decision tree.
-#' @return A list of subtrees representing the pruning sequence (t(0), ..., t(p)).
-get_pruning_sequence_it <- function(t){
-    possible_trees <- get_sub_trees(t)
-    pruning_sequence <- list(t)
+    pruning_sequence_indices <- (1)
     
-    t0 <- t
-    next_leaf_count <- length(t0$get_leaves())
+    t0 <- 1
+
     
-    while(!t0$is_leaf(1)){
-        leaf_count_old <- next_leaf_count
+    remaining_trees <- seq_along(possible_trees)
+    while(any(possible_trees[[t0]]!=1)){
+
         min_cost <- Inf
-        for (t1 in possible_trees){
-            leaf_count_new <- length(t1$get_leaves())
-            if(leaf_count_new==leaf_count_old) next
+        for (i in remaining_trees){
+            if(leaves_count[t0]==leaves_count[i]) next
             
-            cost <- (t1$risk - t0$risk) / (leaf_count_old - leaf_count_new)
+            cost <- (risks[i] - risks[t0]) / (leaves_count[t0] - leaves_count[i])
             
             if(cost < min_cost){
                 min_cost<- cost
-                tp <- t1
-                next_leaf_count <- leaf_count_new
+                tp <- i
             }
         }
-        pruning_sequence <- c(pruning_sequence, list(tp))
+        pruning_sequence_indices <- c(pruning_sequence_indices, tp)
         t0 <- tp
-        possible_trees <- get_remaining_subtrees(t0, possible_trees)
+        remaining_trees <- get_remaining_subtrees(possible_trees[[t0]], possible_trees, remaining_trees)
+
+    }
+    
+    pruning_sequence <- list()
+    pruning_sequence <- sapply(pruning_sequence_indices, function(i){ pruning_sequence[[i]] <- t$copy(possible_trees[[i]])})
+    for(i in seq_along(pruning_sequence_indices)){
+        pruning_sequence[[i]]$risk <- risks[pruning_sequence_indices[i]]
     }
     
     return(pruning_sequence)
@@ -223,16 +187,13 @@ get_pruning_sequence_it <- function(t){
 #' @param t0 The reference tree to compare against.
 #' @param possible_trees A list of all possible subtrees.
 #' @return A filtered list of subtrees that are subtrees of `t0`.
-get_remaining_subtrees <- function(t0, possible_trees ){
-    nodes <- c(1,  t0$data[!is.na(t0$data[, 'y']), 'index'])
-    del_trees <- NULL
-    for (i in seq_along(possible_trees)){
-        if (!all(possible_trees[[i]]$data[!is.na(possible_trees[[i]]$data[, 'y']), 'index'] %in% nodes)){
-            del_trees <- c(i, del_trees)
-        }
+get_remaining_subtrees <- function(t0, possible_trees, remaining_trees ){
+
+    new_remaining <- NULL
+    for (r in remaining_trees){
+        if (all(sapply(possible_trees[r], function(x) return(x %in% t0)))) new_remaining <- c(r, new_remaining)
     }
-    possible_trees[del_trees] <- NULL
-    return(possible_trees)
+    return(new_remaining)
 }
 
 
@@ -245,13 +206,8 @@ get_remaining_subtrees <- function(t0, possible_trees ){
 #' @param t The original decision tree.
 #' @return A vector of subtrees.
 get_sub_trees <- function(t){
-    t_sub <- Tree$new(t$training_data_x, t$training_data_y)
-    t_sub$type <- t$type
-    do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')]), list(recalcRisk=FALSE)))
-    if(is.na(t_sub$data[1, 'y'])) t_sub$data[1, 'y'] <- sum(t$training_data_x)/length(t$training_data_x) #set missing y value for root
-    subtrees <- rec_sub_trees(t, t_sub)
-    x_mask <- subtrees[[1]]$get_x_mask()
-    for(s in subtrees) s$calc_risk(x_mask, force=TRUE)
+    t_sub <- 1
+    subtrees <- rec_sub_trees(t, t_sub, c())
     return(subtrees)
 }
 
@@ -265,23 +221,17 @@ get_sub_trees <- function(t){
 #' @param t_sub The current subtree in the generation process.
 #' @return A list of subtrees generated from `t_original`.
 
-rec_sub_trees <- function(t_original, t_sub){
-    leaves <- t_sub$get_leaves()
+rec_sub_trees <- function(t, t_sub, marked_nodes){
+    leaves <- t_sub[! t_sub %in% t$get_parent_index(t_sub)]
     for (l in leaves){
-        leafChildren  <- t_original$get_children(l)
-        if(is.na(t_sub$get_s(l))) next #node marked as leaf
+        leafChildren  <- t$get_child_indices(l)
+        if(l %in% marked_nodes) next #node marked as leaf
         if (all(is.na(leafChildren))) next
-        
-        t_one <- t_sub$copy()
-        t_one$add_children(index=l, 
-                           s1=leafChildren[[1]][1, 's'], j1=leafChildren[[1]][1, 'j'], y1=leafChildren[[1]][1, 'y'], 
-                           s2=leafChildren[[2]][1, 's'], j2=leafChildren[[2]][1, 'j'], y2=leafChildren[[2]][1, 'y'],
-                           recalcRisk = FALSE)
-        t_sub$mark_leave(l, recalcRisk = FALSE)
-        return (c(rec_sub_trees(t_original, t_one$copy()), rec_sub_trees(t_original, t_sub$copy())))
+        t_sub2 <- c(t_sub, leafChildren)
+
+        marked_nodes1 <- c(marked_nodes, l)
+        return (c((rec_sub_trees(t, t_sub2, marked_nodes)), (rec_sub_trees(t, t_sub, marked_nodes1))))
     }
-    return(t_sub)
+    return(list(t_sub))
     
 }
-
-

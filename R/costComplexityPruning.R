@@ -34,6 +34,7 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
     lambdas <- seq(lambda_min, lambda_max, lambda_step)
     CVs <- NULL
     if(print_progress) cat("checking lambda: ")
+    
     for (i in seq_along(lambdas)){
         if(print_progress) cat(lambdas[i], ",")
         CVs[i] <- CV(lambdas[i], sequences, Im,t$training_data_x, t$training_data_y)
@@ -52,12 +53,12 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
 #' Calculates the cross-validation error for a given complexity parameter \eqn{\lambda} 
 #' by pruning a decision trees with different training data and evaluating its performance on validation sets.
 #'
+#' @export
 #' @param lambda The complexity parameter for pruning.
 #' @param sequences A list of pruning sequences generated from different training data.
-#' @param n The number of observations in the complete training data.
 #' @param Im The partition indices for cross-validation.
-#' @param training_data_x The training data.
-#' @param training_data_y The training data.
+#' @param training_data_x The training data x.
+#' @param training_data_y The training data y.
 #' @return The cross-validation error for the given \eqn{\lambda}.
 CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
     sum <- 0
@@ -69,13 +70,14 @@ CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
         }
         sum <- sum + inner_sum
     }
-    return((1/n) *sum)
+    return((1/length(Im)) *sum)
 }
 
 #' Loss Function
 #'
 #' Computes the loss between the true label and the predicted label based on the type of tree (classification or regression).
 #'
+#' @export
 #' @param t The decision tree object.
 #' @param y The true label.
 #' @param s The predicted label.
@@ -93,6 +95,7 @@ L <- function(t, y, s){
 #'
 #' Creates a partition of the training data into `m` parts for cross-validation purposes.
 #'
+#' @export
 #' @param x The training data.
 #' @param m The number of partitions to create. Default is 10.
 #' @return A vector indicating the partition assignments for each observation.
@@ -112,6 +115,7 @@ make_partition <- function(x, m=10){
 #' Selects the subtree from the pruning sequence that minimizes the 
 #' cost-complexity criterion for a given \eqn{\lambda}.
 #'
+#' @export
 #' @param lambda The complexity parameter for pruning.
 #' @param pruning_sequence A list of subtrees generated during the pruning process.
 #' @return The subtree that minimizes the cost-complexity criterion.
@@ -133,11 +137,11 @@ choose_tp_lambda <- function(lambda, pruning_sequence){
 #'
 #' Generates a sequence of subtrees using weakest link pruning from the original tree.
 #'
+#' @export
 #' @param t The original decision tree.
 #' @return A list of subtrees representing the pruning sequence (t(0), ..., t(p)).
 get_pruning_sequence <- function(t){
-    possible_trees <- get_pruning_sequence(t)
-
+    possible_trees <- get_sub_trees(t)
     return(c(t, rec_pruning_sequence(t,  possible_trees)))
 }
 
@@ -165,13 +169,50 @@ rec_pruning_sequence <- function(t0, possible_trees){
         
         if(cost < min_cost){
             min_cost<- cost
-            tp <- t$copy()
+            tp <- t
         }
     }
     
 
     possible_trees <- get_remaining_subtrees(tp, possible_trees)
     return(c(list(tp), rec_pruning_sequence(tp, possible_trees)))
+}
+
+
+#' Generate Pruning Sequence
+#'
+#' Generates a sequence of subtrees using weakest link pruning from the original tree.
+#'
+#' @param t The original decision tree.
+#' @return A list of subtrees representing the pruning sequence (t(0), ..., t(p)).
+get_pruning_sequence_it <- function(t){
+    possible_trees <- get_sub_trees(t)
+    pruning_sequence <- list(t)
+    
+    t0 <- t
+    next_leaf_count <- length(t0$get_leaves())
+    
+    while(!t0$is_leaf(1)){
+        leaf_count_old <- next_leaf_count
+        min_cost <- Inf
+        for (t1 in possible_trees){
+            leaf_count_new <- length(t1$get_leaves())
+            if(leaf_count_new==leaf_count_old) next
+            
+            cost <- (t1$risk - t0$risk) / (leaf_count_old - leaf_count_new)
+            
+            if(cost < min_cost){
+                min_cost<- cost
+                tp <- t1
+                next_leaf_count <- leaf_count_new
+            }
+        }
+        pruning_sequence <- c(pruning_sequence, list(tp))
+        t0 <- tp
+        possible_trees <- get_remaining_subtrees(t0, possible_trees)
+    }
+    
+    return(pruning_sequence)
 }
 
 #' Get Remaining Subtrees
@@ -200,9 +241,10 @@ get_remaining_subtrees <- function(t0, possible_trees ){
 #'
 #' Generates all possible subtrees of the original tree that share the same root.
 #'
+#' @export
 #' @param t The original decision tree.
 #' @return A vector of subtrees.
-get_pruning_sequence <- function(t){
+get_sub_trees <- function(t){
     t_sub <- Tree$new(t$training_data_x, t$training_data_y)
     t_sub$type <- t$type
     do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')]), list(recalcRisk=FALSE)))
@@ -236,7 +278,7 @@ rec_sub_trees <- function(t_original, t_sub){
                            s2=leafChildren[[2]][1, 's'], j2=leafChildren[[2]][1, 'j'], y2=leafChildren[[2]][1, 'y'],
                            recalcRisk = FALSE)
         t_sub$mark_leave(l, recalcRisk = FALSE)
-        return (c(rec_sub_trees(t_original, t_one), rec_sub_trees(t_original, t_sub)))
+        return (c(rec_sub_trees(t_original, t_one$copy()), rec_sub_trees(t_original, t_sub$copy())))
     }
     return(t_sub)
     

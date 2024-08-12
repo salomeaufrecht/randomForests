@@ -185,19 +185,6 @@ Tree <- setRefClass(
             return(as.numeric(leaves))
         },
         
-        
-        mark_leave = function(index, recalcRisk = TRUE){
-            .self$data[index, c('j', 's')] <- c(0, NA)
-            if(is.na(.self$data[index, 'y'])) stop("leave node with no y value")
-            if(recalcRisk) .self$calc_risk(force=TRUE)
-        },
-        
-        get_s = function(index){
-            return(.self[index][1, 's'])
-        },
-        
-        get_root = function() {return(.self[1])},
-        
         f = function(x){
             node=1
             while (!.self$is_leaf(node)) {

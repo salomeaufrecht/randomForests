@@ -156,23 +156,40 @@ Tree <- setRefClass(
         plot_data = function() {
             X <- .self$training_data_x
             Y <- .self$training_data_y
-            plot(X, Y, col='red')
+            plot(X, Y)
             
-            Y_hat <- sapply(X, \(x) .self$decide(c(x)))
-            points(X, Y_hat)
+            #Y_hat <- sapply(X, \(x) .self$decide(c(x)))
+            #points(X, Y_hat, col="red)
             plot_split_lines()
         },
         
         plot_split_lines = function(index=1, recursive=TRUE) {
-            if (is.na(index) || !.self$exists(index)) return()
-            split_x = .self$data[index, "s"]
-            abline(v=split_x)
-            if (!recursive) return()
-            children <- get_child_indices(index)
-            plot_split_lines(children[1])
-            plot_split_lines(children[2])
+            split_lines = .self$get_split_lines()
+            # leaves <- self$data[.self$get_leaf_indices(), ]
+            Y_hat <- sapply(split_lines, \(x) .self$decide(c(x)))
+            for(i in 1:length(Y_hat)) {
+                abline(v=split_lines[i], lty=2, col="grey")
+                if (i >= length(leaves)-1) next
+                X = c(split_lines[i],split_lines[i+1])
+                Y = rep(Y_hat[i],2)
+                lines(x=X,y=Y)
+            }
         },
-
+        
+        get_split_lines = function() {
+            split_lines <- c()
+            add_lines_rec = function(index=1) {
+                if (is.na(index) || !.self$exists(index)) return()
+                value = unname(.self$data[index, "s"])
+                if (is.na(value)) return()
+                split_lines <<- c(split_lines,value)
+                children <- get_child_indices(index)
+                add_lines_rec(children[1])
+                add_lines_rec(children[2])
+            }
+            add_lines_rec()
+            return(sort(split_lines))
+        },
         
         get_leaf_indices = function(subtree=NULL){
             if(!is.null(subtree)) return(subtree[! subtree %in% .self$get_parent_index(subtree)])

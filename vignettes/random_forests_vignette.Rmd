@@ -60,7 +60,7 @@ Die folgende Liste ist nicht vollständig:
 - **is_leaf(index)**: Überprüft, ob ein Knoten ein Blatt ist (keine Kindknoten hat).
 - **decide(x)**: Gibt die Vorhersage für eine Eingabe `x` basierend auf dem Baum zurück.
 - **plot_data()** und **plot_split_lines(index)**: Methoden zum Visualisieren der Daten und der Trennlinien des Baums.
-- **get_leaves(subtree = NULL)**: Gibt die Indizes der Blattknoten zurück.
+- **get_leaf_indices(subtree = NULL)**: Gibt die Indizes der Blattknoten zurück.
 - **calc_risk(x_mask, force = FALSE, subtree = NULL)**: Berechnet das Risiko des Baums oder eines Teilbaums.
 
 #### Zusätzliche Funktionen

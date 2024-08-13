@@ -190,7 +190,7 @@ Tree <- setRefClass(
                 if (is.na(index) || !.self$exists(index)) return()
                 value = unname(.self$data[index, "s"])
                 if (is.na(value)) return()
-                split_lines <<- c(split_lines,value)
+                suppressWarnings(split_lines <<- c(split_lines,value))
                 children <- get_child_indices(index)
                 add_lines_rec(children[1])
                 add_lines_rec(children[2])

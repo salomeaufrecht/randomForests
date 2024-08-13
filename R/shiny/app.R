@@ -9,8 +9,8 @@ source("../greedy.R")
 ui <- dashboardPage(
         dashboardHeader(title = "Random Forests"),
         dashboardSidebar(sidebarMenu(
-            menuItem("Greedy", tabName = "greedy", icon = icon("dashboard")),
-            menuItem("Pruning", tabName = "pruning", icon = icon("th"))
+            menuItem("Greedy", tabName = "greedy", icon = icon("tree")),
+            menuItem("Pruning", tabName = "pruning", icon = icon("scissors"))
         )),
         dashboardBody(
             tags$head(

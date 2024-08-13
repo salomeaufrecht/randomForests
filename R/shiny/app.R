@@ -1,24 +1,45 @@
 library(shiny)
 library(bslib)
+library(shinydashboard)
 
-# Define UI for app that draws a histogram ----
-ui <- page_sidebar(
-    # App title ----
-    title = "Random Forests",
-    # Sidebar panel for inputs ----
-    sidebar = sidebar(
-        # Input: Slider for the number of bins ----
-        sliderInput(
-            inputId = "splits",
-            label = "Number of splits:",
-            min = 1,
-            max = 10,
-            value = 5
+
+
+
+ui <- dashboardPage(
+        dashboardHeader(title = "Random Forests"),
+        dashboardSidebar(sidebarMenu(
+            menuItem("Greedy", tabName = "greedy", icon = icon("dashboard")),
+            menuItem("Pruning", tabName = "pruning", icon = icon("th"))
+        )),
+        dashboardBody(
+            tags$head(
+                tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+            ),
+            tabItems(
+                tabItem(tabName = "greedy",
+                        fluidRow(width=12, align="center",
+                            
+                            box(
+                                title = "Settings",
+                                collapsible = T,
+                                width=12,
+                                sliderInput("splits", "Number of splits:", 1, 10, 3)
+                            ),
+                            
+                                   box(title="Greedy Regression", width=12,
+                            column(width=12, align="center", 
+                                   plotOutput("greedyPlot", width="750px"))
+                                       )
+                        )
+                ),
+                tabItem(tabName = "pruning",
+                        fluidRow(
+                            h2("HELLO")
+                        )
+                )
+            )
         )
-    ),
-    # Output: Histogram ----
-    plotOutput(outputId = "distPlot")
-)
+    )
 
 # Define server logic required to draw a histogram ----
 server <- function(input, output) {
@@ -31,7 +52,7 @@ server <- function(input, output) {
     # 1. It is "reactive" and therefore should be automatically
     #    re-executed when inputs (input$bins) change
     # 2. Its output type is a plot
-    output$distPlot <- renderPlot({
+    output$greedyPlot <- renderPlot({
         
         set.seed(123)
         n <- 150

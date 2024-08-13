@@ -3,7 +3,8 @@ library(bslib)
 library(shinydashboard)
 
 
-
+source("../tree_datastructure.R")
+source("../greedy.R")
 
 ui <- dashboardPage(
         dashboardHeader(title = "Random Forests"),

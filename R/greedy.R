@@ -44,7 +44,7 @@ minimize_risk <- function(tree, index, A_indices) {
     
     for (j in 1:d) {
         # positions of A_indices in order matrix
-        order_A_indices <- tree$inverse_matrix[A_indices, j]
+        order_A_indices <- tree$inverse_order_matrix[A_indices, j]
         sorted_A_indices <- A_indices[order(order_A_indices)]
         A_X <- tree$training_data_x[sorted_A_indices, j]
         split_values <- A_X[-n] + (A_X[-1]-A_X[-n])/2

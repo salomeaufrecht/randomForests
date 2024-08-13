@@ -4,16 +4,16 @@ library(bslib)
 # Define UI for app that draws a histogram ----
 ui <- page_sidebar(
     # App title ----
-    title = "Hello There!",
+    title = "Random Forests",
     # Sidebar panel for inputs ----
     sidebar = sidebar(
         # Input: Slider for the number of bins ----
         sliderInput(
-            inputId = "bins",
-            label = "Number of bins:",
+            inputId = "splits",
+            label = "Number of splits:",
             min = 1,
-            max = 50,
-            value = 30
+            max = 10,
+            value = 5
         )
     ),
     # Output: Histogram ----
@@ -33,20 +33,27 @@ server <- function(input, output) {
     # 2. Its output type is a plot
     output$distPlot <- renderPlot({
         
-        x    <- faithful$waiting
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
+        set.seed(123)
+        n <- 150
+        sigma <- 0.1
+        X <- runif(n, 0, 1)
+        epsilon <- rnorm(n, 0, sigma)
+        Y <- sin(2*pi*X) + epsilon
         
-        hist(x, breaks = bins, col = "#007bc2", border = "white",
-             xlab = "Waiting time to next eruption (in mins)",
-             main = "Histogram of waiting times")
+        testtree <- greedy(
+            matrix(X, ncol=1),
+            matrix(Y, ncol=1),
+            input$splits
+        )
+        
+        
+        x <- seq(0,1,length.out=100)
+        y <- sin(2*pi*x)
+        testtree$plot_data()
+        lines(x, y, col="red")
         
     })
     
 }
 
-library(shiny)
-
-
 shinyApp(ui = ui, server = server)
-
-runApp("shiny")

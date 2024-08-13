@@ -5,18 +5,23 @@
 #' @export greedy
 #' @param x whatever
 #' 
-greedy <- function(training_data_x, training_data_y) {
+greedy <- function(training_data_x, training_data_y, split_count=10) {
     stopifnot(nrow(training_data_x) == nrow(training_data_y))
     
     tree <- Tree$new(training_data_x, training_data_y)
     tree$data[1, "y"] <- mean(training_data_y)
-    new_tree(tree, 1, 1, 1:nrow(training_data_x))
+    new_tree(tree=tree,
+             index=1,
+             k=1,
+             max_k=split_count,
+             A_parent_indices =  1:nrow(training_data_x)
+    )
     return(tree)
 }
 
-new_tree <- function(tree, index, k, A_parent_indices) {
+new_tree <- function(tree, index, k, max_k, A_parent_indices) {
     A_parent_indices <- matrix(A_parent_indices, ncol=1)
-    if(nrow(A_parent_indices) < 5 || k > 10) return()
+    if(nrow(A_parent_indices) < 5 || k > max_k) return()
     min_values <- minimize_risk(tree, index, A_parent_indices) 
     tree$data[index, 2:3] <- c(min_values$j, min_values$s)
     child_indices <- tree$add_children(index, y1=min_values$y1, y2=min_values$y2)
@@ -24,8 +29,8 @@ new_tree <- function(tree, index, k, A_parent_indices) {
     A1 <- left_values
     A2 <- setdiff(A_parent_indices, left_values)
     
-    new_tree(tree, child_indices[1], k+1, A1)
-    new_tree(tree, child_indices[2], k+1, A2)
+    new_tree(tree, child_indices[1], k+1, max_k, A1)
+    new_tree(tree, child_indices[2], k+1, max_k, A2)
 }
 
 minimize_risk <- function(tree, index, A_indices) {

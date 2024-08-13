@@ -165,7 +165,7 @@ Tree <- setRefClass(
             Y_hat <- sapply(split_lines, \(x) .self$decide(c(x)))
             for(i in 1:length(Y_hat)) {
                 abline(v=split_lines[i], lty=2, col="grey")
-                if (i >= length(leaves)-1) next
+                if (i >= length(split_lines)-1) next
                 X = c(split_lines[i],split_lines[i+1])
                 Y = rep(Y_hat[i],2)
                 lines(x=X,y=Y)

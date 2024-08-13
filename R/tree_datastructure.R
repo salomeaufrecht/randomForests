@@ -162,10 +162,22 @@ Tree <- setRefClass(
         
         plot_split_lines = function(index=1, recursive=TRUE) {
             split_lines = .self$get_split_lines()
+            min_y_hat = .self$decide(c(min(.self$training_data_x)))
+            max_y = max(.self$training_data_x)
+            max_y_hat = .self$decide(c(max_y))
+            # plot first and last line
+            X = c(0,split_lines[1])
+            Y = rep(min_y_hat,2)
+            lines(x=X,y=Y)
+            X = c(split_lines[length(split_lines)],max_y)
+            Y = rep(max_y_hat,2)
+            lines(x=X,y=Y)    
+            # plot all other lines
             Y_hat <- sapply(split_lines, \(x) .self$decide(c(x)))
             for(i in 1:length(Y_hat)) {
                 abline(v=split_lines[i], lty=2, col="grey")
-                if (i >= length(split_lines)-1) next
+                if (i > length(split_lines)-1) next
+                print(split_lines[i+1])
                 X = c(split_lines[i],split_lines[i+1])
                 Y = rep(Y_hat[i],2)
                 lines(x=X,y=Y)

@@ -157,15 +157,11 @@ Tree <- setRefClass(
             X <- .self$training_data_x
             Y <- .self$training_data_y
             plot(X, Y)
-            
-            #Y_hat <- sapply(X, \(x) .self$decide(c(x)))
-            #points(X, Y_hat, col="red)
             plot_split_lines()
         },
         
         plot_split_lines = function(index=1, recursive=TRUE) {
             split_lines = .self$get_split_lines()
-            # leaves <- self$data[.self$get_leaf_indices(), ]
             Y_hat <- sapply(split_lines, \(x) .self$decide(c(x)))
             for(i in 1:length(Y_hat)) {
                 abline(v=split_lines[i], lty=2, col="grey")

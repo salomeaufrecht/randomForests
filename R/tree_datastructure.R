@@ -163,9 +163,11 @@ Tree <- setRefClass(
             plot_split_lines()
         },
         
-        plot_split_lines = function(index=1) {
+        plot_split_lines = function(index=1, recursive=TRUE) {
             if (is.na(index) || !.self$exists(index)) return()
-            abline(v=.self$data[index, "s"])
+            split_x = .self$data[index, "s"]
+            abline(v=split_x)
+            if (!recursive) return()
             children <- get_child_indices(index)
             plot_split_lines(children[1])
             plot_split_lines(children[2])

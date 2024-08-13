@@ -15,7 +15,7 @@
 #' @examples
 #' # Assuming `tree` is an initialized decision tree object
 #' pruned_tree <- cost_complexity_pruning(tree, lambda_min=1, lambda_max=50, plot=TRUE)
-cost_complexity_pruning <- function(t, m=10, lambda_min=0.01, lambda_max=1, lambda_step=0.05, plot=FALSE,  print_progress=FALSE){
+cost_complexity_pruning <- function(t, m=10, lambda_min=0, lambda_max=1, lambda_step=0.05, plot=FALSE,  print_progress=FALSE){
     
     stopifnot("m need to be greater 1"= m>=2)
     Im <- make_partition(t$training_data_x, m)
@@ -65,7 +65,7 @@ CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
         t <- choose_tp_lambda(lambda, sequences[[m]])
         inner_sum <- 0
         for (i in which(Im == m)){
-            inner_sum <- inner_sum + L(t, training_data_y[i], t$f(training_data_x[i]))
+            inner_sum <- inner_sum + L(t, training_data_y[i], t$decide(training_data_x[i]))
         }
         sum <- sum + inner_sum
     }
@@ -136,7 +136,8 @@ choose_tp_lambda <- function(lambda, pruning_sequence){
 #' Generate Pruning Sequence
 #'
 #' Generates a sequence of subtrees using weakest link pruning from the original tree.
-#'
+#' 
+#' @export
 #' @param t The original decision tree.
 #' @return A list of subtrees representing the pruning sequence (t(0), ..., t(p)).
 get_pruning_sequence <- function(t){

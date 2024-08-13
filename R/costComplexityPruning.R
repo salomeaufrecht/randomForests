@@ -122,7 +122,7 @@ choose_tp_lambda <- function(lambda, pruning_sequence){
     min_value <- Inf 
     t_lambda <- NULL
     for(t in pruning_sequence){
-        val <- t$calc_risk() + lambda * length(t$get_leaves())
+        val <- t$calc_risk() + lambda * length(t$get_leave_indices())
         if(val<min_value){
             min_value <- val
             t_lambda <- t$copy()
@@ -143,7 +143,7 @@ get_pruning_sequence <- function(t){
     possible_trees <- get_sub_trees(t)
     x_mask <- t$get_x_mask()
     risks <- sapply(possible_trees, function(x) t$calc_risk(x_mask=x_mask, subtree=x))
-    leaves_count <- sapply(possible_trees, function(x) length(t$get_leaves(subtree=x)))
+    leaves_count <- sapply(possible_trees, function(x) length(t$get_leave_indices(subtree=x)))
     
     pruning_sequence_indices <- (1)
     t0 <- 1

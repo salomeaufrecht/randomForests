@@ -174,7 +174,7 @@ Tree <- setRefClass(
         },
 
         
-        get_leaves = function(subtree=NULL){
+        get_leave_indices = function(subtree=NULL){
             if(!is.null(subtree)) return(subtree[! subtree %in% .self$get_parent_index(subtree)])
             data_ <- .self$data
             nodes <- which(!is.na(data_[ ,'y']))
@@ -199,7 +199,7 @@ Tree <- setRefClass(
         calc_risk = function(x_mask=.self$get_x_mask(), force=FALSE, subtree=NULL){
             if(is.null(subtree) && !is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
             risk_ <- 0
-            if(is.null(subtree))leaves <- .self$get_leaves()
+            if(is.null(subtree))leaves <- .self$get_leave_indices()
             else leaves <- subtree[! subtree %in% .self$get_parent_index(subtree)]
             
             if (.self$type == "classification"){
@@ -223,7 +223,7 @@ Tree <- setRefClass(
             x_mask <- list(0) #which x values 'go this way'
             x_mask[[1]] <- rep(TRUE, nrow(.self$training_data_x))
             parents <- .self$data[!is.na(.self$data[, 's']), 'index']
-            parents <- parents[!parents %in% .self$get_leaves()]
+            parents <- parents[!parents %in% .self$get_leave_indices()]
             for(p in parents){
                 child_indices <- .self$get_child_indices(p)
                 x_mask[[child_indices[1]]] <- .self$training_data_x < .self$data[p, 's'] & x_mask[[p]]
@@ -289,7 +289,7 @@ setMethod(f = "show",
           signature = "Tree",
           definition = function(object) {
               cat("Tree\n")
-              (object$get_leaves()) |> unique() -> leaves
+              (object$get_leave_indices()) |> unique() -> leaves
               depth <- max(object$depth(leaves))
               
               print(c(type=object$type,

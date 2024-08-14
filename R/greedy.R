@@ -5,10 +5,10 @@
 #' @export greedy
 #' @param x whatever
 #' 
-greedy <- function(training_data_x, training_data_y) {
+greedy <- function(training_data_x, training_data_y, classification_tree=FALSE) {
     stopifnot(nrow(training_data_x) == nrow(training_data_y))
     
-    tree <- Tree$new(training_data_x, training_data_y)
+    tree <- Tree$new(training_data_x, training_data_y, classification_tree)
     tree$data[1, "y"] <- mean(training_data_y)
     new_tree(tree, 1, 1, 1:nrow(training_data_x))
     return(tree)
@@ -34,17 +34,16 @@ minimize_risk <- function(tree, index, A_indices) {
     min_risk <- .Machine$integer.max
     min_j <- -1
     min_s <- -1
+    min_c1_hat <- -1
+    min_c2_hat <- -2
     min_left_values <- NA
     
     n <- nrow(A_indices)
     Y <- tree$training_data_y
     
-    #print(A_indices)
-    #A_X <- tree$training_data_x[A_indices,,drop=FALSE]
-    
     for (j in 1:d) {
         # positions of A_indices in order matrix
-        order_A_indices <- tree$inverse_matrix[A_indices, j]
+        order_A_indices <- tree$inverse_order_matrix[A_indices, j]
         sorted_A_indices <- A_indices[order(order_A_indices)]
         A_X <- tree$training_data_x[sorted_A_indices, j]
         split_values <- A_X[-n] + (A_X[-1]-A_X[-n])/2
@@ -52,24 +51,34 @@ minimize_risk <- function(tree, index, A_indices) {
             # Because the values are sorted we can just use 1:i for all indices that are smaller
             left_values <- 1:i
             s <- split_values[i]
-            c1_hat <- 1/length(left_values) * sum(Y[sorted_A_indices[left_values]])
-            c2_hat <- 1/(n - length(left_values)) * sum(Y[sorted_A_indices[-left_values]])
-            risk <- sum( (Y[sorted_A_indices[left_values]]  - c1_hat)**2 ) +
-                    sum( (Y[sorted_A_indices[-left_values]] - c2_hat)**2 )
+            if (tree$type == 'regression') {
+                c1_hat <- 1/length(left_values) * sum(Y[sorted_A_indices[left_values]])
+                c2_hat <- 1/(n - length(left_values)) * sum(Y[sorted_A_indices[-left_values]])
+                risk <- sum( (Y[sorted_A_indices[left_values]]  - c1_hat)**2 ) +
+                        sum( (Y[sorted_A_indices[-left_values]] - c2_hat)**2 )
+            }
+            else {
+                p1 <- sapply(1:tree$k, \(x) sum(Y[sorted_A_indices[left_values]] == x) / length(left_values) )
+                p2 <- sapply(1:tree$k, \(x) sum(Y[sorted_A_indices[-left_values]] == x) / (n - length(left_values)) )
+                c1_hat <- which.max(p1) 
+                c2_hat <- which.max(p2)
+                risk <- (length(left_values) * (1-p1[c1_hat])) + ((n-length(left_values)) * (1-p2[c2_hat]))
+            }
+            
             if(risk < min_risk) {
                 min_risk <- risk
                 min_j <- j
                 min_s <- s
-                min_left_values <- left_values
+                min_c1_hat <- c1_hat
+                min_c2_hat <- c2_hat
+                # position in training_data matrix
+                min_left_values <- sorted_A_indices[left_values]
             }
         }
     }
     
-    y1 <- 1/length(min_left_values) * sum(Y[sorted_A_indices[min_left_values]])
-    y2 <- 1/(n-length(min_left_values)) * sum(Y[sorted_A_indices[-min_left_values]])
-    
-    # position in training_data matrix
-    min_left_values <- sorted_A_indices[min_left_values]
+    y1 <- min_c1_hat
+    y2 <- min_c2_hat
     
     return(list(j=min_j, s=min_s, y1=y1, y2=y2, left_values=min_left_values))
 }

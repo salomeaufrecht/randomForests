@@ -2,7 +2,7 @@ source("R/tree_datastructure.R")
 source("R/greedy.R")
 library(tidyverse)
 
-print("One dimensional example:")
+# One dimensional example
 
 n <- 150
 sigma <- 0.1
@@ -17,6 +17,21 @@ testtree <- greedy(
 
 testtree$plot_data()
 
+# Two dimensional classification example:
+
+n <- 700
+X1 <- runif(n, 0, 1)
+X2 <- runif(n, -1, 1)
+Y <- as.integer((X2 > sin(2*pi*X1)) + (X1 > 0.5)) + 1
+
+X <- matrix(c(X1, X2), ncol=2)
+Y <- matrix(Y, ncol=1)
+testtree <- greedy(X,Y, classification_tree = TRUE)
+
+testtree$plot_data()
+
+
+# Multi dimensional example:
 
 iristest <- as.matrix(iris[, 1:4])
 

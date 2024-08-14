@@ -1,3 +1,5 @@
+library(tidyr)
+
 #' Tree data structure. Allows accessing elements via index,
 #' getting child and parents elements, determining whether 
 #' an element is a leaf and finding the depth of an element.
@@ -16,10 +18,11 @@ Tree <- setRefClass(
         data = "matrix",
         d = "numeric",
         type = "character",
+        k = "integer",
         training_data_x = "matrix",
         training_data_y = "matrix",
         order_matrix = "matrix",
-        inverse_matrix = "matrix",
+        inverse_order_matrix = "matrix",
         risk = "numeric"
     ),
     methods = list(
@@ -30,6 +33,7 @@ Tree <- setRefClass(
             colnames(.self$data) <- c("index", "j", "s", "y")
             .self$data[1:length, 1] <- 1:length
             .self$type <- ifelse(classificationType, "classification", "regression")
+            .self$k <- ifelse(classificationType, as.integer(max(training_data_y)), 0L)
             .self$d <- ncol(training_data_x)
             .self$training_data_x <- training_data_x
             .self$training_data_y <- training_data_y
@@ -140,13 +144,32 @@ Tree <- setRefClass(
                 }
             }
             .self$data[current_node, "y"]
+        }, 
+        
+        f = function(x){
+            node=1
+            while (!.self$is_leaf(node)) {
+                children <- .self$get_child_indices(node)
+                node <- ifelse(.self$data[node, 's'] > x[.self$data[node, 'j']], children[1], children[2])
+            }
+            return(unname(.self$data[node, 'y']))
         },
+        
         
         get_length = function() {
             return(sum(!is.na(.self$data[,2])))
         },
         
         plot_data = function() {
+            if(ncol(.self$training_data_x) > 2)
+            {
+                warning("Cant plot more dimensional data")
+                return()
+            }
+            else if (ncol(.self$training_data_x) == 2 && .self$type=='classification') {
+                plot2D_classification()
+                return()
+            }
             X <- .self$training_data_x
             Y <- .self$training_data_y
             plot(X, Y, col='red')
@@ -162,6 +185,28 @@ Tree <- setRefClass(
             children <- get_child_indices(index)
             plot_split_lines(children[1])
             plot_split_lines(children[2])
+        },
+        
+        plot2D_classification = function() {
+            X <- .self$training_data_x
+            Y <- .self$training_data_y
+            colors <- c('red', 'blue', 'green', 'magenta', 'cyan', 'purple')
+            plot(NULL, xlim=c(min(X[, 1]), max(X[, 2])), ylim=c(min(X[, 2]), max(X[, 2])), ylab="X2", xlab="X1")
+            for(i in 1:.self$k) {
+                X_i <- X[Y==i, ] 
+                points(X_i[, 1], X_i[, 2], col=colors[i], pch=19)
+            }
+            
+            plot(NULL, xlim=c(min(X[, 1]), max(X[, 2])), ylim=c(min(X[, 2]), max(X[, 2])), ylab="X2", xlab="X1")
+            n <- 200
+            X1_hat <- seq(min(X[, 1]), max(X[, 1]), length.out=sqrt(n))
+            X2_hat <- seq(min(X[, 2]), max(X[, 2]), length.out=sqrt(n))
+            X_hat <- as.matrix(crossing(X1_hat, X2_hat))
+            Y_hat <- matrix(sapply(1:nrow(X_hat), \(x) .self$decide(X_hat[x, ])), ncol=1)
+            for(i in 1:.self$k) {
+                X_i <- X_hat[Y_hat==i, ,drop=FALSE] 
+                points(X_i[, 1], X_i[, 2], col=colors[i], pch=19, cex=2)
+            }
         },
 
         
@@ -190,15 +235,7 @@ Tree <- setRefClass(
         
         get_root = function() {return(.self[1])},
         
-        f = function(x){
-            node=1
-            while (!.self$is_leaf(node)) {
-                children <- .self$get_child_indices(node)
-                node <- ifelse(.self$data[node, 's'] > x[.self$data[node, 'j']], children[1], children[2])
-            }
-            return(unname(.self$data[node, 'y']))
-        },
-        
+     
         calc_risk = function(x_mask=.self$get_x_mask(), force=FALSE){
             if(!is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
             risk_ <- 0
@@ -290,7 +327,7 @@ setMethod(f = "show",
           definition = function(object) {
               cat("Tree\n")
               print(c(type=object$type,
-                      nodes=sum(!is.na(object$data[,2])),
+                      nodes=sum(!is.na(object$data[,4])),
                       depth=object$d,
                       dimension=object$d),
               )

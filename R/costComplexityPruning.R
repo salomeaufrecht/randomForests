@@ -6,21 +6,20 @@
 #' @export
 #' @param t The original decision tree to be pruned.
 #' @param m Number of partitions to create for cross-validation. Default is 10.
-#' @param lambda_min Minimum value for the complexity parameter \eqn{\lambda}. Default is 1.
-#' @param lambda_max Maximum value for the complexity parameter \eqn{\lambda}. Default is 100.
-#' @param lambda_step Step size for iterating over \eqn{\lambda} values. Default is 1.
+#' @param lambda_min Minimum value for the complexity parameter \eqn{\lambda}. Default is 0.
+#' @param lambda_max Maximum value for the complexity parameter \eqn{\lambda}. Default is 1
+#' @param lambda_step Step size for iterating over \eqn{\lambda} values. Default is 0.05.
 #' @param plot Logical flag to indicate whether to plot the cross-validation error against \eqn{\lambda}. Default is FALSE.
 #' @param print_progress Logical flag to indicate whether to print progress messages during execution. Default is FALSE.
 #' @return A pruned decision tree based on the optimal \eqn{\lambda} value.
 #' @examples
 #' # Assuming `tree` is an initialized decision tree object
-#' pruned_tree <- costComplexityPruning(tree, lambda_min=1, lambda_max=50, plot=TRUE)
-costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_step=1, plot=FALSE,  print_progress=FALSE){
+#' pruned_tree <- cost_complexity_pruning(tree, lambda_min=1, lambda_max=50, lambda_step=1, plot=TRUE)
+cost_complexity_pruning <- function(t, m=10, lambda_min=0, lambda_max=1, lambda_step=0.05, plot=FALSE,  print_progress=FALSE){
     
     stopifnot("m need to be greater 1"= m>=2)
     Im <- make_partition(t$training_data_x, m)
     sequences <- list(0)
-    
     if(print_progress)cat("creating pruning sequence ")
     for (i in 1:m){
         if(print_progress)cat(i, ",")
@@ -34,6 +33,7 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
     lambdas <- seq(lambda_min, lambda_max, lambda_step)
     CVs <- NULL
     if(print_progress) cat("checking lambda: ")
+    
     for (i in seq_along(lambdas)){
         if(print_progress) cat(lambdas[i], ",")
         CVs[i] <- CV(lambdas[i], sequences, Im,t$training_data_x, t$training_data_y)
@@ -52,12 +52,12 @@ costComplexityPruning <- function(t, m=10, lambda_min=1, lambda_max=100, lambda_
 #' Calculates the cross-validation error for a given complexity parameter \eqn{\lambda} 
 #' by pruning a decision trees with different training data and evaluating its performance on validation sets.
 #'
+#' @export
 #' @param lambda The complexity parameter for pruning.
 #' @param sequences A list of pruning sequences generated from different training data.
-#' @param n The number of observations in the complete training data.
 #' @param Im The partition indices for cross-validation.
-#' @param training_data_x The training data.
-#' @param training_data_y The training data.
+#' @param training_data_x The training data x.
+#' @param training_data_y The training data y.
 #' @return The cross-validation error for the given \eqn{\lambda}.
 CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
     sum <- 0
@@ -65,17 +65,18 @@ CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
         t <- choose_tp_lambda(lambda, sequences[[m]])
         inner_sum <- 0
         for (i in which(Im == m)){
-            inner_sum <- inner_sum + L(t, training_data_y[i], t$f(training_data_x[i]))
+            inner_sum <- inner_sum + L(t, training_data_y[i], t$decide(training_data_x[i]))
         }
         sum <- sum + inner_sum
     }
-    return((1/n) *sum)
+    return((1/length(Im)) *sum)
 }
 
 #' Loss Function
 #'
 #' Computes the loss between the true label and the predicted label based on the type of tree (classification or regression).
 #'
+#' @export
 #' @param t The decision tree object.
 #' @param y The true label.
 #' @param s The predicted label.
@@ -93,6 +94,7 @@ L <- function(t, y, s){
 #'
 #' Creates a partition of the training data into `m` parts for cross-validation purposes.
 #'
+#' @export
 #' @param x The training data.
 #' @param m The number of partitions to create. Default is 10.
 #' @return A vector indicating the partition assignments for each observation.
@@ -112,66 +114,67 @@ make_partition <- function(x, m=10){
 #' Selects the subtree from the pruning sequence that minimizes the 
 #' cost-complexity criterion for a given \eqn{\lambda}.
 #'
+#' @export
 #' @param lambda The complexity parameter for pruning.
 #' @param pruning_sequence A list of subtrees generated during the pruning process.
 #' @return The subtree that minimizes the cost-complexity criterion.
 choose_tp_lambda <- function(lambda, pruning_sequence){
     min_value <- Inf 
-    tLambda <- NULL
+    t_lambda <- NULL
     for(t in pruning_sequence){
-        val <- t$calc_risk() + lambda * length(t$get_leaves())
+        val <- t$calc_risk() + lambda * length(t$get_leaf_indices())
         if(val<min_value){
             min_value <- val
-            tLambda <- t$copy()
+            t_lambda <- t$copy()
             }
     }
-    return(tLambda)
+    return(t_lambda)
 }
+
 
 
 #' Generate Pruning Sequence
 #'
 #' Generates a sequence of subtrees using weakest link pruning from the original tree.
-#'
+#' 
+#' @export
 #' @param t The original decision tree.
 #' @return A list of subtrees representing the pruning sequence (t(0), ..., t(p)).
 get_pruning_sequence <- function(t){
-    possible_trees <- get_pruning_sequence(t)
+    possible_trees <- get_sub_trees(t)
+    x_mask <- t$get_x_mask()
+    risks <- sapply(possible_trees, function(x) t$calc_risk(x_mask=x_mask, subtree=x))
+    leaves_count <- sapply(possible_trees, function(x) length(t$get_leaf_indices(subtree=x)))
+    
+    pruning_sequence_indices <- (1)
+    t0 <- 1
 
-    return(c(t, rec_pruning_sequence(t,  possible_trees)))
-}
+    remaining_trees <- seq_along(possible_trees)
+    while(any(possible_trees[[t0]]!=1)){
 
-
-#' Recursive Pruning Sequence
-#'
-#' Should not be used by itself!
-#' 
-#' A helper function that recursively generates the pruning sequence for the given tree.
-#'
-#' @param t0 The current tree in the pruning process.
-#' @param possible_trees A list of possible subtrees that can be generated from the current tree.
-#' @return A list of subtrees in the pruning sequence.
-
-rec_pruning_sequence <- function(t0, possible_trees){
-    if(t0$is_leaf(1)) return()
-    leaf_count_old <- length(t0$get_leaves())
-    min_cost <- Inf
- 
-    for (t in possible_trees){
-        leaf_count_new <- length(t$get_leaves())
-        if(leaf_count_new==leaf_count_old) next
-        
-        cost <- (t$calc_risk() - t0$calc_risk()) / (leaf_count_old - leaf_count_new)
-        
-        if(cost < min_cost){
-            min_cost<- cost
-            tp <- t$copy()
+        min_cost <- Inf
+        for (i in remaining_trees){
+            if(leaves_count[t0]==leaves_count[i]) next
+            
+            cost <- (risks[i] - risks[t0]) / (leaves_count[t0] - leaves_count[i])
+            
+            if(cost < min_cost){
+                min_cost<- cost
+                tp <- i
+            }
         }
+        pruning_sequence_indices <- c(pruning_sequence_indices, tp)
+        t0 <- tp
+        remaining_trees <- get_remaining_subtrees(possible_trees[[t0]], possible_trees, remaining_trees)
     }
     
-
-    possible_trees <- get_remaining_subtrees(tp, possible_trees)
-    return(c(list(tp), rec_pruning_sequence(tp, possible_trees)))
+    pruning_sequence <- list()
+    pruning_sequence <- sapply(pruning_sequence_indices, function(i){ pruning_sequence[[i]] <- t$copy(possible_trees[[i]])})
+    for(i in seq_along(pruning_sequence_indices)){
+        pruning_sequence[[i]]$risk <- risks[pruning_sequence_indices[i]]
+    }
+    
+    return(pruning_sequence)
 }
 
 #' Get Remaining Subtrees
@@ -179,37 +182,30 @@ rec_pruning_sequence <- function(t0, possible_trees){
 #' Filters the list of possible subtrees to include only those that are
 #' subtrees of a specified tree.
 #'
-#' @param t0 The reference tree to compare against.
-#' @param possible_trees A list of all possible subtrees.
-#' @return A filtered list of subtrees that are subtrees of `t0`.
-get_remaining_subtrees <- function(t0, possible_trees ){
-    nodes <- c(1,  t0$data[!is.na(t0$data[, 'y']), 'index'])
-    del_trees <- NULL
-    for (i in seq_along(possible_trees)){
-        if (!all(possible_trees[[i]]$data[!is.na(possible_trees[[i]]$data[, 'y']), 'index'] %in% nodes)){
-            del_trees <- c(i, del_trees)
-        }
+#' @param t0 Indices of nodes belonging to subtree (relative to original tree)
+#' @param possible_trees A list of all possible subtrees (their node indices in original tree).
+#' @return A vector of indices of trees in possible_trees that are subtrees of `t0`.
+get_remaining_subtrees <- function(t0, possible_trees, remaining_trees ){
+
+    new_remaining <- NULL
+    for (r in remaining_trees){
+        if (all(sapply(possible_trees[r], function(x) return(x %in% t0)))) new_remaining <- c(r, new_remaining)
     }
-    possible_trees[del_trees] <- NULL
-    return(possible_trees)
+    return(new_remaining)
 }
 
 
 
 #' Generate Possible Subtrees
 #'
-#' Generates all possible subtrees of the original tree that share the same root.
+#' Generates all possible pruned subtrees of the original tree that share the same root.
 #'
+#' @export
 #' @param t The original decision tree.
-#' @return A vector of subtrees.
-get_pruning_sequence <- function(t){
-    t_sub <- Tree$new(t$training_data_x, t$training_data_y)
-    t_sub$type <- t$type
-    do.call(t_sub$set_values, c(list(1), as.list(t$get_root()[1, c('s', 'j', 'y')]), list(recalcRisk=FALSE)))
-    if(is.na(t_sub$data[1, 'y'])) t_sub$data[1, 'y'] <- sum(t$training_data_x)/length(t$training_data_x) #set missing y value for root
-    subtrees <- rec_sub_trees(t, t_sub)
-    x_mask <- subtrees[[1]]$get_x_mask()
-    for(s in subtrees) s$calc_risk(x_mask, force=TRUE)
+#' @return A list of nodes indices each forming a pruned subtree.
+get_sub_trees <- function(t){
+    t_sub <- 1
+    subtrees <- rec_sub_trees(t, t_sub, c())
     return(subtrees)
 }
 
@@ -219,27 +215,21 @@ get_pruning_sequence <- function(t){
 #'
 #' A helper function that recursively generates all possible subtrees of a given tree.
 #'
-#' @param t_original The original decision tree.
-#' @param t_sub The current subtree in the generation process.
-#' @return A list of subtrees generated from `t_original`.
+#' @param t The original decision tree.
+#' @param t_sub The vector of nodes belonging to current subtree in the generation process.
+#' @return A list of node indieces of subtrees generated from `t`.
 
-rec_sub_trees <- function(t_original, t_sub){
-    leaves <- t_sub$get_leaves()
+rec_sub_trees <- function(t, t_sub, marked_nodes){
+    leaves <- t_sub[! t_sub %in% t$get_parent_index(t_sub)]
     for (l in leaves){
-        leafChildren  <- t_original$get_children(l)
-        if(is.na(t_sub$get_s(l))) next #node marked as leaf
+        leafChildren  <- t$get_child_indices(l)
+        if(l %in% marked_nodes) next #node marked as leaf
         if (all(is.na(leafChildren))) next
-        
-        t_one <- t_sub$copy()
-        t_one$add_children(index=l, 
-                           s1=leafChildren[[1]][1, 's'], j1=leafChildren[[1]][1, 'j'], y1=leafChildren[[1]][1, 'y'], 
-                           s2=leafChildren[[2]][1, 's'], j2=leafChildren[[2]][1, 'j'], y2=leafChildren[[2]][1, 'y'],
-                           recalcRisk = FALSE)
-        t_sub$mark_leave(l, recalcRisk = FALSE)
-        return (c(rec_sub_trees(t_original, t_one), rec_sub_trees(t_original, t_sub)))
+        t_sub2 <- c(t_sub, leafChildren)
+
+        marked_nodes1 <- c(marked_nodes, l)
+        return (c((rec_sub_trees(t, t_sub2, marked_nodes)), (rec_sub_trees(t, t_sub, marked_nodes1))))
     }
-    return(t_sub)
+    return(list(t_sub))
     
 }
-
-

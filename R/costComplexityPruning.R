@@ -6,15 +6,15 @@
 #' @export
 #' @param t The original decision tree to be pruned.
 #' @param m Number of partitions to create for cross-validation. Default is 10.
-#' @param lambda_min Minimum value for the complexity parameter \eqn{\lambda}. Default is 1.
-#' @param lambda_max Maximum value for the complexity parameter \eqn{\lambda}. Default is 100.
-#' @param lambda_step Step size for iterating over \eqn{\lambda} values. Default is 1.
+#' @param lambda_min Minimum value for the complexity parameter \eqn{\lambda}. Default is 0.
+#' @param lambda_max Maximum value for the complexity parameter \eqn{\lambda}. Default is 1
+#' @param lambda_step Step size for iterating over \eqn{\lambda} values. Default is 0.05.
 #' @param plot Logical flag to indicate whether to plot the cross-validation error against \eqn{\lambda}. Default is FALSE.
 #' @param print_progress Logical flag to indicate whether to print progress messages during execution. Default is FALSE.
 #' @return A pruned decision tree based on the optimal \eqn{\lambda} value.
 #' @examples
 #' # Assuming `tree` is an initialized decision tree object
-#' pruned_tree <- cost_complexity_pruning(tree, lambda_min=1, lambda_max=50, plot=TRUE)
+#' pruned_tree <- cost_complexity_pruning(tree, lambda_min=1, lambda_max=50, lambda_step=1, plot=TRUE)
 cost_complexity_pruning <- function(t, m=10, lambda_min=0, lambda_max=1, lambda_step=0.05, plot=FALSE,  print_progress=FALSE){
     
     stopifnot("m need to be greater 1"= m>=2)
@@ -182,9 +182,9 @@ get_pruning_sequence <- function(t){
 #' Filters the list of possible subtrees to include only those that are
 #' subtrees of a specified tree.
 #'
-#' @param t0 The reference tree to compare against.
-#' @param possible_trees A list of all possible subtrees.
-#' @return A filtered list of subtrees that are subtrees of `t0`.
+#' @param t0 Indices of nodes belonging to subtree (relative to original tree)
+#' @param possible_trees A list of all possible subtrees (their node indices in original tree).
+#' @return A vector of indices of trees in possible_trees that are subtrees of `t0`.
 get_remaining_subtrees <- function(t0, possible_trees, remaining_trees ){
 
     new_remaining <- NULL
@@ -198,11 +198,11 @@ get_remaining_subtrees <- function(t0, possible_trees, remaining_trees ){
 
 #' Generate Possible Subtrees
 #'
-#' Generates all possible subtrees of the original tree that share the same root.
+#' Generates all possible pruned subtrees of the original tree that share the same root.
 #'
 #' @export
 #' @param t The original decision tree.
-#' @return A vector of subtrees.
+#' @return A list of nodes indices each forming a pruned subtree.
 get_sub_trees <- function(t){
     t_sub <- 1
     subtrees <- rec_sub_trees(t, t_sub, c())
@@ -215,9 +215,9 @@ get_sub_trees <- function(t){
 #'
 #' A helper function that recursively generates all possible subtrees of a given tree.
 #'
-#' @param t_original The original decision tree.
-#' @param t_sub The current subtree in the generation process.
-#' @return A list of subtrees generated from `t_original`.
+#' @param t The original decision tree.
+#' @param t_sub The vector of nodes belonging to current subtree in the generation process.
+#' @return A list of node indieces of subtrees generated from `t`.
 
 rec_sub_trees <- function(t, t_sub, marked_nodes){
     leaves <- t_sub[! t_sub %in% t$get_parent_index(t_sub)]

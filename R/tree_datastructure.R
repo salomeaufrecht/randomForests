@@ -212,15 +212,6 @@ Tree <- setRefClass(
             return(as.numeric(leaves))
         },
         
-        f = function(x){
-            node=1
-            while (!.self$is_leaf(node)) {
-                children <- .self$get_child_indices(node)
-                node <- ifelse(.self$data[node, 's'] > x[.self$data[node, 'j']], children[1], children[2])
-            }
-            return(unname(.self$data[node, 'y']))
-        },
-        
         calc_risk = function(x_mask=.self$get_x_mask(), force=FALSE, subtree=NULL){
             if(is.null(subtree) && !is.null(.self$risk) && !force && !identical(numeric(0), .self$risk)) return(.self$risk)
             risk_ <- 0

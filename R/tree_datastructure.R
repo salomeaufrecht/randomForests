@@ -64,7 +64,10 @@ Tree <- setRefClass(
                     t$data <- matrix(.self$data[nodes, ], 
                                                        ncol= 4, byrow=TRUE, 
                                                        dimnames = list(c(1),names(.self$data[nodes, ])))
-                } else t$data <- .self$data[1:max(nodes), ]
+                } else{ 
+                    copy_data <- .self$data[1:max(nodes), ]
+                    copy_data[!1:max(nodes) %in% nodes, c('j', 's', 'y')] <- c(NA, NA, NA)
+                    t$data <- copy_data}
                 
             }
             return(t)

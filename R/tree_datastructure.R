@@ -64,7 +64,10 @@ Tree <- setRefClass(
                     t$data <- matrix(.self$data[nodes, ], 
                                                        ncol= 4, byrow=TRUE, 
                                                        dimnames = list(c(1),names(.self$data[nodes, ])))
-                } else t$data <- .self$data[1:max(nodes), ]
+                } else{ 
+                    copy_data <- .self$data[1:max(nodes), ]
+                    copy_data[!1:max(nodes) %in% nodes, c('j', 's', 'y')] <- c(NA, NA, NA)
+                    t$data <- copy_data}
                 
             }
             return(t)
@@ -139,9 +142,12 @@ Tree <- setRefClass(
             return(all(is.na(.self$get_child_indices(index))))
         },
         
-        decide = function(x) {
+        decide = function(x, subtree=NULL) {
             current_node <- 1
-            while(!is_leaf(current_node)) {
+            if(is.null(subtree)){leaves <- .self$get_leaf_indices()
+            } else leaves <- subtree[! subtree %in% .self$get_parent_index(subtree)]
+            
+            while(!current_node %in% leaves) {
                 j <- .self$data[current_node, "j"]
                 s <- .self$data[current_node, "s"]
                 if(x[j] < s) {
@@ -269,17 +275,30 @@ Tree <- setRefClass(
             if(is.null(subtree))leaves <- .self$get_leaf_indices()
             else leaves <- subtree[! subtree %in% .self$get_parent_index(subtree)]
             
-            if (.self$type == "classification"){
-                for(l in leaves){
-                    risk_ <- risk_+ sum((.self$training_data_y[x_mask[[l]]] != .self$data[l, 'y']))
+            if(d>1){
+                if (.self$type == "classification"){
+                    for(i in seq_along(.self$training_data_y)){
+                        risk_ <- risk_ + as.integer(.self$training_data_y[i] != .self$decide(.self$training_data_x[i, ], subtree))
+                    }
+                } else{
+                    for(i in seq_along(.self$training_data_y)){
+                        risk_ <- risk_ + (.self$training_data_y[i] - .self$decide(.self$training_data_x[i, ], subtree))^2
+                    }
+                }
+            } else{
+            
+                if (.self$type == "classification"){
+                    for(l in leaves){
+                        risk_ <- risk_+ sum((.self$training_data_y[x_mask[[l]]] != .self$data[l, 'y']))
+                    }
+                }
+                else{
+                    for(l in leaves){
+                        risk_ <- risk_+ sum((.self$training_data_y[x_mask[[l]]]-.self$data[l, 'y'])^2)
+                    }
                 }
             }
-            else{
-                for(l in leaves){
-                    risk_ <- risk_+ sum((.self$training_data_y[x_mask[[l]]]-.self$data[l, 'y'])^2)
-                }
-            }
-            risk_ <- risk_/length(.self$training_data_x)
+            risk_ <- risk_/length(.self$training_data_y)
             if(is.null(subtree)) .self$risk <- risk_
             return(risk_)
         },

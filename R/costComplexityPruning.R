@@ -18,18 +18,24 @@
 cost_complexity_pruning <- function(t, m=10, lambda_min=0, lambda_max=1, lambda_step=0.05, plot=FALSE,  print_progress=FALSE){
     
     stopifnot("m need to be greater 1"= m>=2)
-    Im <- make_partition(t$training_data_x, m)
+    Im <- make_partition(t$training_data_y, m)
     sequences <- list(0)
     if(print_progress)cat("creating pruning sequence ")
     for (i in 1:m){
         if(print_progress)cat(i, ",")
-        sequences[[i]] <- (get_pruning_sequence(
+        if(t$d ==1){ 
+            sequences[[i]] <- (get_pruning_sequence(
                                 greedy(matrix(t$training_data_x[Im!=i]) , 
                                        matrix(t$training_data_y[Im!=i]))))
+        } else{
+            sequences[[i]] <- (get_pruning_sequence(
+                greedy((t$training_data_x[Im!=i, ]) , 
+                       matrix(t$training_data_y[Im!=i]))))
+        }
     }
     
     if(print_progress) cat("\nall pruning sequences created\n")
- 
+
     lambdas <- seq(lambda_min, lambda_max, lambda_step)
     CVs <- NULL
     if(print_progress) cat("checking lambda: ")
@@ -64,8 +70,14 @@ CV <- function(lambda, sequences, Im, training_data_x, training_data_y){
     for (m in seq_along(sequences)){
         t <- choose_tp_lambda(lambda, sequences[[m]])
         inner_sum <- 0
-        for (i in which(Im == m)){
-            inner_sum <- inner_sum + L(t, training_data_y[i], t$decide(training_data_x[i]))
+        if(t$d==1){
+            for (i in which(Im == m)){
+                inner_sum <- inner_sum + L(t, training_data_y[i], t$decide(training_data_x[i]))
+            }
+        } else{
+            for (i in which(Im == m)){
+                inner_sum <- inner_sum + L(t, training_data_y[i], t$decide(training_data_x[i, ]))
+            }
         }
         sum <- sum + inner_sum
     }

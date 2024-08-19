@@ -10,6 +10,7 @@ greedy <- function(training_data_x, training_data_y, split_count=10, classificat
     
     tree <- Tree$new(training_data_x, training_data_y, classification_tree)
     tree$data[1, "y"] <- mean(training_data_y)
+    if(classification_tree) tree$data[1, "y"] <- as.numeric(names(which.max(table(Y))))
     new_tree(tree=tree,
              index=1,
              k=1,

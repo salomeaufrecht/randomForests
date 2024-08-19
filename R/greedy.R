@@ -5,7 +5,7 @@
 #' @export greedy
 #' @param x whatever
 #' 
-greedy <- function(training_data_x, training_data_y, split_count=10, classification_tree=FALSE) {
+greedy <- function(training_data_x, training_data_y, split_count=10, classification_tree=FALSE, random_subset=FALSE) {
     stopifnot(nrow(training_data_x) == nrow(training_data_y))
     
     tree <- Tree$new(training_data_x, training_data_y, classification_tree)
@@ -14,27 +14,28 @@ greedy <- function(training_data_x, training_data_y, split_count=10, classificat
              index=1,
              k=1,
              max_k=split_count,
-             A_parent_indices =  1:nrow(training_data_x)
+             A_parent_indices =  1:nrow(training_data_x),
+             m = ifelse(random_subset, sample(1:tree$d, 1), tree$d)
     )
     return(tree)
 }
 
-new_tree <- function(tree, index, k, max_k, A_parent_indices) {
+new_tree <- function(tree, index, k, max_k, A_parent_indices, m) {
     A_parent_indices <- matrix(A_parent_indices, ncol=1)
     if(nrow(A_parent_indices) < 5 || k > max_k) return()
-    min_values <- minimize_risk(tree, index, A_parent_indices) 
+    min_values <- minimize_risk(tree, index, A_parent_indices, random_subset) 
     tree$data[index, 2:3] <- c(min_values$j, min_values$s)
     child_indices <- tree$add_children(index, y1=min_values$y1, y2=min_values$y2)
     left_values <- min_values$left_values
     A1 <- left_values
     A2 <- setdiff(A_parent_indices, left_values)
     
-    new_tree(tree, child_indices[1], k+1, max_k, A1)
-    new_tree(tree, child_indices[2], k+1, max_k, A2)
+    new_tree(tree, child_indices[1], k+1, max_k, A1, random_subset, m)
+    new_tree(tree, child_indices[2], k+1, max_k, A2, random_subset, m)
+    
 }
 
-minimize_risk <- function(tree, index, A_indices) {
-    d <- tree$d
+minimize_risk <- function(tree, index, A_indices, m) {
     
     min_risk <- .Machine$integer.max
     min_j <- -1
@@ -45,6 +46,8 @@ minimize_risk <- function(tree, index, A_indices) {
     
     n <- nrow(A_indices)
     Y <- tree$training_data_y
+    
+    d <- ifelse(m==tree$d, tree$d, sample(1:tree$d, m))
     
     for (j in 1:d) {
         # positions of A_indices in order matrix

@@ -45,8 +45,8 @@ new_tree <- function(tree, index, k, max_k, min_data, A_parent_indices, m) {
     A1 <- left_values
     A2 <- setdiff(A_parent_indices, left_values)
     
-    new_tree(tree, child_indices[1], k+1, max_k, A1, m)
-    new_tree(tree, child_indices[2], k+1, max_k, A2, m)
+    new_tree(tree, child_indices[1], k=k+1, max_k = max_k, min_data=min_data, A_parent_indices=A1, m=m)
+    new_tree(tree, child_indices[2], k=k+1, max_k = max_k, min_data=min_data, A_parent_indices=A2, m=m)
     
 }
 

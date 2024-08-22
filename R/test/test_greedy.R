@@ -19,7 +19,7 @@ testtree$plot_data()
 
 # Two dimensional classification example:
 
-n <- 700
+n <- 400
 X1 <- runif(n, 0, 1)
 X2 <- runif(n, -1, 1)
 Y <- as.integer((X2 > sin(2*pi*X1)) + (X1 > 0.5)) + 1

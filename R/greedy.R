@@ -1,41 +1,56 @@
-#' this is an example documentation
+#' Greedy algorithm
 #' 
-#' there are more tags...
-#' compile with devtools::document()
-#' @export greedy
-#' @param x whatever
+#' This function generates a decision tree with a greedy algorithm
+#' @export
+#' @param training_data_x Matrix of inputs
+#' @param training_data_x Matrix of outputs (of given inputs)
+#' @param split_count Max amount of split depth (0 for no limit)
+#' @param data_in_leaves Amount data that should be in each leaf
+#' @param classification_tree Should the tree be a classification tree?
+#' @param random_subset Modification used for random_forest where only a random subset of dimensions is considered
+#' @export tree decision tree
 #' 
-greedy <- function(training_data_x, training_data_y, split_count=10, classification_tree=FALSE, random_subset=FALSE) {
+greedy <- function(training_data_x, training_data_y, split_count=10, data_in_leaves=5, classification_tree=FALSE, random_subset=FALSE) {
     stopifnot(nrow(training_data_x) == nrow(training_data_y))
-    
     tree <- Tree$new(training_data_x, training_data_y, classification_tree)
     tree$data[1, "y"] <- mean(training_data_y)
     if(classification_tree) tree$data[1, "y"] <- as.numeric(names(which.max(table(Y))))
     new_tree(tree=tree,
              index=1,
              k=1,
-             max_k=split_count,
-             A_parent_indices =  1:nrow(training_data_x),
+             max_k=ifelse(split_count<=0, Inf, split_count),
+             min_data=data_in_leaves,
+             A_parent_indices =  1:nrow(training_data_x), 
              m = ifelse(random_subset, sample(1:tree$d, 1), tree$d)
     )
     return(tree)
 }
 
-new_tree <- function(tree, index, k, max_k, A_parent_indices, m) {
+#' Generates new tree with two more children
+#' @export
+#' @param tree Original tree
+#' @param index Index of leaf
+#' @param k Depth of Algorithm
+#' @param max_k Max amount of split depth (0 for no limit)
+#' @param min_data Amount data that should be in each leaf
+#' @param A_parent_indices All the data classified in leaf node
+#' @param m 
+new_tree <- function(tree, index, k, max_k, min_data, A_parent_indices, m) {
     A_parent_indices <- matrix(A_parent_indices, ncol=1)
-    if(nrow(A_parent_indices) < 5 || k > max_k) return()
-    min_values <- minimize_risk(tree, index, A_parent_indices, random_subset) 
+    if(nrow(A_parent_indices) < min_data || k > max_k) return()
+    min_values <- minimize_risk(tree, index, A_parent_indices, m) 
     tree$data[index, 2:3] <- c(min_values$j, min_values$s)
     child_indices <- tree$add_children(index, y1=min_values$y1, y2=min_values$y2)
     left_values <- min_values$left_values
     A1 <- left_values
     A2 <- setdiff(A_parent_indices, left_values)
     
-    new_tree(tree, child_indices[1], k+1, max_k, A1, random_subset, m)
-    new_tree(tree, child_indices[2], k+1, max_k, A2, random_subset, m)
+    new_tree(tree, child_indices[1], k+1, max_k, A1, m)
+    new_tree(tree, child_indices[2], k+1, max_k, A2, m)
     
 }
 
+#' Minimizes risk at a given index
 minimize_risk <- function(tree, index, A_indices, m) {
     
     min_risk <- .Machine$integer.max

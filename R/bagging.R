@@ -10,14 +10,15 @@
 #' @examples
 #' # Assuming `tree` is an initialized decision tree object
 #' ensemble_model <- bagging(tree, B = 20, lambda = 0.5)
-bagging <- function(t, B = 10, lambda = 0) {
-    if (t$type == "classification") return(bagging_classification(t, B))
-    return(bagging_regression(t, B, lambda))
+bagging <- function(t, B = 10, lambda = 0, random_subset=FALSE) {
+    if (t$type == "classification") return(bagging_classification(t, B, random_subset))
+    return(bagging_regression(t, B, lambda, random_subset))
 }
 
-bagging_regression <- function(t, B, lambda) {
+bagging_regression <- function(t, B, lambda, random_subset = FALSE) {
     t_star <- list(B)
     for (i in 1:B) {
+        cat("Loop ", i, "\n")
         t_star[[i]] <- get_t_star(t, lambda)
     }
 
@@ -28,9 +29,9 @@ bagging_regression <- function(t, B, lambda) {
     return(f_bagg)
 }
 
-get_t_star <- function(t, lambda = 0) {
+get_t_star <- function(t, lambda = 0, random_subset = FALSE) {
     sample_indices <- get_bootstrap_sample(t)
-    t_star <- greedy(matrix(t$training_data_x[sample_indices, ]), matrix(t$training_data_y[sample_indices, ]))
+    t_star <- greedy(matrix(t$training_data_x[sample_indices, ], ncol=t$d), matrix(t$training_data_y[sample_indices, ]), random_subset = random_subset)
     if (t$type == "classification") return(t_star)
     trees <- get_pruning_sequence(t_star)
     t_star_pruned <- choose_tp_lambda(lambda, trees)
@@ -39,13 +40,14 @@ get_t_star <- function(t, lambda = 0) {
 
 
 get_bootstrap_sample <- function(t) {
-    n <- length(t$training_data_x)
+    #n <- length(t$training_data_x)
+    n <- nrow(matrix(t$training_data_x, ncol=t$d))
     sample <- sample(1:n, n, replace = TRUE)
 }
 
 
 
-bagging_classification <- function(t, B) {
+bagging_classification <- function(t, B, random_subset = FALSE) {
     t_star <- vector("list", B)
 
     for (i in 1:B) {

@@ -54,7 +54,10 @@ bagging_classification <- function(t, B, random_subset = FALSE) {
         t_star[[i]] <- get_t_star(t)
     }
 
-    f_bagg <- function(x) x # TODO
+    f_bagg <- function(x) {
+        ux <- unique(sapply(t_star, function(tree) tree$decide(x)))
+        return(ux[which.max(tabulate(match(x, ux)))])
+    }
 
 
     return(f_bagg)

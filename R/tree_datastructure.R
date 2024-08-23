@@ -166,7 +166,7 @@ Tree <- setRefClass(
         plot_data = function() {
             if(ncol(.self$training_data_x) > 2)
             {
-                warning("Cant plot more dimensional data")
+                warning("Cant plot high-dimensional data")
                 return()
             }
             else if (ncol(.self$training_data_x) == 2 && .self$type=='classification') {

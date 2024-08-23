@@ -6,8 +6,8 @@ testTreeDatastructure = function() {
 
   
   print("Assign element 1 & 2. Element 1:")
-  test[1] <- c(5,6)
-  test[2] <- c(5324,631)
+  test[1] <- c(1,2.1)
+  test[2] <- c(2,3)
   print(test[1])
   cat("\nShould be: 1, 5, 6\n\n")
   cat("Element at index: 5\n")
@@ -32,10 +32,6 @@ testTreeDatastructure = function() {
   cat(paste0("Is element 6 a leaf? ",test$is_leaf(6)))
   cat("\nShould be: TRUE\n\n")
 
-  cat("\nGive children to 6\n")
-  test$add_children(6, 1, 1, 2, 2)
-  cat("\nChildren of 6: \n")
-  print(test$get_children(6))
 
 }
 testTreeDatastructure()

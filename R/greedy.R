@@ -8,13 +8,12 @@
 #' @param data_in_leaves Amount data that should be in each leaf
 #' @param classification_tree Should the tree be a classification tree?
 #' @param random_subset Modification used for random_forest where only a random subset of dimensions is considered
-#' @export tree decision tree
 #' 
 greedy <- function(training_data_x, training_data_y, split_count=10, data_in_leaves=5, classification_tree=FALSE, random_subset=FALSE) {
     stopifnot(nrow(training_data_x) == nrow(training_data_y))
     tree <- Tree$new(training_data_x, training_data_y, classification_tree)
     tree$data[1, "y"] <- mean(training_data_y)
-    if(classification_tree) tree$data[1, "y"] <- as.numeric(names(which.max(table(Y))))
+    if(classification_tree) tree$data[1, "y"] <- as.numeric(names(which.max(table(training_data_y))))
     new_tree(tree=tree,
              index=1,
              k=1,

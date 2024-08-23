@@ -7,9 +7,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-
-
-
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -21,14 +18,16 @@ knitr::opts_chunk$set(
 library(randomForests)
 ```
 
-
 # Einführungen
+
 Das Packet Random Forests bietet verschiedene Möglichkeiten um mit Entscheidungsbäumen zu arbeiten.
 
 ## Installation
+
 ....
 
 ## Funktionalitäten
+
 ### Die `Tree`-Datenstruktur
 
 #### Überblick
@@ -39,79 +38,93 @@ Die `Tree`-Datenstruktur in diesem Paket repräsentiert binäre Entscheidungsbä
 
 Ein `Tree`-Objekt besteht aus mehreren wichtigen Feldern:
 
-- **data**: Eine Matrix, die die Knoten des Baums speichert. Jede Zeile repräsentiert einen Knoten mit den Spalten "index" (Index des Knotens), "j" (Index der zu prüfenden Dimension), "s" (Schwellenwert) und "y" (Vorhersagewert).
-- **d**: Die Dimension der Eingabedaten.
-- **type**: Der Typ des Entscheidungsbaums, entweder "classification" für Klassifikation oder "regression" für Regression.
-- **training_data_x** und **training_data_y**: Die Trainingsdaten, die zum Aufbau des Baums verwendet werden.
-- **order_matrix** und **inverse_order_matrix**: Matrizen, die die Sortierung der Eingabedaten nach jeder Dimension und deren Umkehrung speichern.
-- **risk**: Ein numerischer Wert, der das Risiko (Fehler) des aktuellen Baums darstellt.
+-   **data**: Eine Matrix, die die Knoten des Baums speichert. Jede Zeile repräsentiert einen Knoten mit den Spalten "index" (Index des Knotens), "j" (Index der zu prüfenden Dimension), "s" (Schwellenwert) und "y" (Vorhersagewert).
+-   **d**: Die Dimension der Eingabedaten.
+-   **type**: Der Typ des Entscheidungsbaums, entweder "classification" für Klassifikation oder "regression" für Regression.
+-   **training_data_x** und **training_data_y**: Die Trainingsdaten, die zum Aufbau des Baums verwendet werden.
+-   **order_matrix** und **inverse_order_matrix**: Matrizen, die die Sortierung der Eingabedaten nach jeder Dimension und deren Umkehrung speichern.
+-   **risk**: Ein numerischer Wert, der das Risiko (Fehler) des aktuellen Baums darstellt.
 
 #### Methoden
 
-Das `Tree`-Objekt bietet verschiedene Methoden, um mit dem Baum zu arbeiten.
-Die folgende Liste ist nicht vollständig:
+Das `Tree`-Objekt bietet verschiedene Methoden, um mit dem Baum zu arbeiten. Die folgende Liste ist nicht vollständig:
 
-
-- **depth(index)**: Gibt die Tiefe eines Knotens im Baum zurück.
-- **copy(nodes = NULL)**: Erstellt eine Kopie des Baums oder eines Teilbaums, basierend auf den angegebenen Knoten.
-- **exists(index)**: Überprüft, ob ein Knoten mit dem gegebenen Index im Baum existiert.
-- **get_parent_index(index)**: Gibt den Index des Elterknotens zurück.
-- **get_child_indices(index)**: Gibt die Indizes der Kindknoten zurück.
-- **is_leaf(index)**: Überprüft, ob ein Knoten ein Blatt ist (keine Kindknoten hat).
-- **decide(x)**: Gibt die Vorhersage für eine Eingabe `x` basierend auf dem Baum zurück.
-- **plot_data()** und **plot_split_lines(index)**: Methoden zum Visualisieren der Daten und der Trennlinien des Baums.
-- **get_leaf_indices(subtree = NULL)**: Gibt die Indizes der Blattknoten zurück.
-- **calc_risk(x_mask, force = FALSE, subtree = NULL)**: Berechnet das Risiko des Baums oder eines Teilbaums.
+-   **depth(index)**: Gibt die Tiefe eines Knotens im Baum zurück.
+-   **copy(nodes = NULL)**: Erstellt eine Kopie des Baums oder eines Teilbaums, basierend auf den angegebenen Knoten.
+-   **exists(index)**: Überprüft, ob ein Knoten mit dem gegebenen Index im Baum existiert.
+-   **get_parent_index(index)**: Gibt den Index des Elterknotens zurück.
+-   **get_child_indices(index)**: Gibt die Indizes der Kindknoten zurück.
+-   **is_leaf(index)**: Überprüft, ob ein Knoten ein Blatt ist (keine Kindknoten hat).
+-   **decide(x)**: Gibt die Vorhersage für eine Eingabe `x` basierend auf dem Baum zurück.
+-   **plot_data()** und **plot_split_lines(index)**: Methoden zum Visualisieren der Daten und der Trennlinien des Baums.
+-   **get_leaf_indices(subtree = NULL)**: Gibt die Indizes der Blattknoten zurück.
+-   **calc_risk(x_mask, force = FALSE, subtree = NULL)**: Berechnet das Risiko des Baums oder eines Teilbaums.
 
 #### Zusätzliche Funktionen
 
 Es gibt auch spezielle Funktionen, die das Arbeiten mit der `Tree`-Datenstruktur vereinfachen:
 
-- **Zugriffsfunktionen `[.Tree` und `[<-.Tree`**: Diese Funktionen ermöglichen den Zugriff und die Manipulation von Baumknoten über Indizes, ähnlich wie bei Arrays. Sie ermöglichen auch das Massen-Update von Knoten.
-- **show** und **print.Tree**: Diese Methoden bieten eine kurze Übersicht über die Struktur des Baums, wie Typ, Anzahl der Knoten, Tiefe und Dimension.
+-   **Zugriffsfunktionen `[.Tree` und `[<-.Tree`**: Diese Funktionen ermöglichen den Zugriff und die Manipulation von Baumknoten über Indizes, ähnlich wie bei Arrays. Sie ermöglichen auch das Massen-Update von Knoten.
+-   **show** und **print.Tree**: Diese Methoden bieten eine kurze Übersicht über die Struktur des Baums, wie Typ, Anzahl der Knoten, Tiefe und Dimension.
+
+### Greedy Algorithmus
+
+Einen Entscheidungsbaum zu generieren, der für gegebene Trainingsdaten das Risiko minimiert ist zwar möglich, jedoch extrem
+rechenintensiv. Ein deutlich effizienterer Ansatz ist das erstellen eines initialen Baums, welcher das Risiko möglichst
+stark minimiert und dann durch weitere Algorithmen weiter verbessert werden kann. Zur Erstellung dieses initialen Baums wird
+ein Greedy Algorithmus verwendet: Dieser Algorithmus funktioniert rekursiv indem er an den gegebenen Baum einen split
+einbaut, dieser split minimiert die Kosten in diesem Schritt. Der initiale Baum besteht nur aus der Wurzel. Durch einen
+Split entstehen zwei neue Bereiche A1 & A2. Im regressionsfall ist der Y-Wert dieser Bereiche der durchschnitt aller
+trainingsdaten in diesem bereich. Im Klassifikationsfall ist der Y-Wert die Klasse, welche am Häufigstem in diesen Bereich vorkommt.
+In diesem Baket wird der greedy Algorithmus durch die Funktion 'greedy(training_data_x, training_data_y, split_count=10, data_in_leaves=5, classification_tree=FALSE, random_subset=FALSE)' umgesetzt.
 
 ### Erstellung von Teilbäumen
 
 Mit der Methode `get_sub_trees(t)` können alle zurückgeschnittenen Teilbäume eines Baums erstellt werden. Diese Funktion gibt lediglich die Indizes der entsprechenden Knoten der Teilbäume zurück. Dies ist nützlich, um verschiedene Teile des Baums isoliert zu analysieren oder um den besten Baum im Rahmen des Cost-Complexity Pruning auszuwählen.
 
-
-
 ### Cost-Complexity Pruning
 
 Beim Cost-Complexity Pruning wird der Baum zurückgeschnitten und somit verkleinert. Der ursprüngliche Baum könnte überangepasst sein, was bedeutet, dass er zwar für die Trainingsdaten sehr gute Ergebnisse liefert, jedoch bei neuen Daten nicht das bestmögliche Ergebnis erzielt.
 
-Zum Zurückschneiden wird eine Sequenz von zurückgeschnittenen Bäumen erstellt, bei der die Bäume jeweils den geringsten Pro-Knoten-Anstieg im Vergleich zum vorherigen Baum aufweisen (Weakest Link Pruning, implementiert durch `get_pruning_sequence(t)`). Anschließend kann für jedes beliebige \(\lambda \in \mathbb{R}\) der beste Baum ausgewählt werden. Der beste Baum ist derjenige, der die Summe aus Risiko und \(\lambda \times\) der Anzahl der Blätter minimiert (`choose_tp_lambda(lambda, pruning_sequence)`).
+Zum Zurückschneiden wird eine Sequenz von zurückgeschnittenen Bäumen erstellt, bei der die Bäume jeweils den geringsten Pro-Knoten-Anstieg im Vergleich zum vorherigen Baum aufweisen (Weakest Link Pruning, implementiert durch `get_pruning_sequence(t)`). Anschließend kann für jedes beliebige $\lambda \in \mathbb{R}$ der beste Baum ausgewählt werden. Der beste Baum ist derjenige, der die Summe aus Risiko und $\lambda \times$ der Anzahl der Blätter minimiert (`choose_tp_lambda(lambda, pruning_sequence)`).
 
-Für das Cost-Complexity Pruning werden die Trainingsdaten in \(m\) Partitionen unterteilt (`make_partition(data, m)`), und für jede Partition wird ein Baum erstellt, der einen Teil der Daten nicht enthält. Danach wird für jedes \(\lambda\) der Cross-Validation-Wert berechnet. Das bedeutet, dass für jedes \(\lambda\) und für jeden der \(m\) Bäume der "beste" Baum (siehe oben) gewählt wird, und die Abweichungen der Trainingsdaten, die jeweils nicht im Baum berücksichtigt wurden, summiert werden (`CV(lambda, sequences, Im, training_data_x, training_data_y)`). Am Ende wird das \(\lambda\) gewählt, welches diese Summe minimiert, und damit wird der resultierende Baum berechnet.
+Für das Cost-Complexity Pruning werden die Trainingsdaten in $m$ Partitionen unterteilt (`make_partition(data, m)`), und für jede Partition wird ein Baum erstellt, der einen Teil der Daten nicht enthält. Danach wird für jedes $\lambda$ der Cross-Validation-Wert berechnet. Das bedeutet, dass für jedes $\lambda$ und für jeden der $m$ Bäume der "beste" Baum (siehe oben) gewählt wird, und die Abweichungen der Trainingsdaten, die jeweils nicht im Baum berücksichtigt wurden, summiert werden (`CV(lambda, sequences, Im, training_data_x, training_data_y)`). Am Ende wird das $\lambda$ gewählt, welches diese Summe minimiert, und damit wird der resultierende Baum berechnet.
 
 ### Bagging (Bootstrap Aggregating)
 
 Bagging, oder Bootstrap Aggregating, ist eine Methode, die verwendet wird, um die Genauigkeit und Stabilität von Vorhersagemodellen zu erhöhen. Die Idee hinter Bagging ist, mehrere Versionen eines Vorhersagemodells zu erstellen und diese Modelle zu kombinieren, um eine robustere Vorhersage zu erhalten.
 
-
 Der Bagging-Algorithmus funktioniert wie folgt:
 
-1. **Bootstrap-Stichproben**: Aus den Trainingsdaten werden mehrere Bootstrap-Stichproben erzeugt. Eine Bootstrap-Stichprobe wird erstellt, indem man zufällig und mit Zurücklegen aus den Trainingsdaten zieht, sodass jede Stichprobe eine gleich große, aber möglicherweise unterschiedliche Menge an Datenpunkten enthält.
+1.  **Bootstrap-Stichproben**: Aus den Trainingsdaten werden mehrere Bootstrap-Stichproben erzeugt. Eine Bootstrap-Stichprobe wird erstellt, indem man zufällig und mit Zurücklegen aus den Trainingsdaten zieht, sodass jede Stichprobe eine gleich große, aber möglicherweise unterschiedliche Menge an Datenpunkten enthält.
 
-2. **Trainingsmodelle**: Für jede Bootstrap-Stichprobe wird ein separater Entscheidungsbaum trainiert.
+2.  **Trainingsmodelle**: Für jede Bootstrap-Stichprobe wird ein separater Entscheidungsbaum trainiert.
 
-3. **Aggregieren der Vorhersagen**: Nachdem alle Modelle trainiert wurden, werden ihre Vorhersagen aggregiert, um die endgültige Vorhersage zu berechnen:
-    - Bei **Klassifikationsaufgaben** wird die Vorhersage durch Mehrheitswahl der Modelle bestimmt.
-    - Bei **Regressionsaufgaben** wird der Durchschnitt der Vorhersagen der Modelle verwendet.
+3.  **Aggregieren der Vorhersagen**: Nachdem alle Modelle trainiert wurden, werden ihre Vorhersagen aggregiert, um die endgültige Vorhersage zu berechnen:
+
+    -   Bei **Klassifikationsaufgaben** wird die Vorhersage durch Mehrheitswahl der Modelle bestimmt.
+    -   Bei **Regressionsaufgaben** wird der Durchschnitt der Vorhersagen der Modelle verwendet.
 
 Durch die Kombination der Ergebnisse vieler Modelle kann Bagging die Varianz des Modells reduzieren, was zu stabileren und genaueren Vorhersagen führt.
 
-
 In diesem Paket wird das Bagging-Verfahren durch die Funktion `bagging(t, B = 10, lambda = 1)` implementiert. Hierbei wird je nach Typ des Entscheidungsbaums (`t$type`) zwischen Klassifikations-Bagging (`bagging_classification`) und Regressions-Bagging (`bagging_regression`) unterschieden.
 
+### Random Forests
+Der random Forest Algorithmus ist eine Erweiterung des Bagging Algorithmus und kann bei mehrdimensionalen Trainingsdaten
+zu besseren Ergebnissen führen. Der greedy Algorithmus läuft leicht verändert und minimiert das Risiko nun nicht mehr über
+alle Dimensionen, sondern nur über eine zufällige Teilmenge.
+Implementiert ist dieser Algorithmus über die Funktion: random_forest(training_data_x, training_data_y, classification_tree=FALSE) 
 
 ## Beispiele
+
 ```{r}
 n <- 30
 x <- runif(n, 0, 2*pi)
 y <- sin(x) + runif(n, -0.4, 0.4)
 
 t <- greedy(matrix(x), matrix(y))
+
+t$plot_data()
 
 t_prun <- cost_complexity_pruning(t, lambda_min=0.001, lambda_max =0.04, 
                                   lambda_step = 0.003, 

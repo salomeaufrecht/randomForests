@@ -2,14 +2,28 @@
 % Please edit documentation in R/greedy.R
 \name{greedy}
 \alias{greedy}
-\title{this is an example documentation}
+\title{Greedy algorithm}
 \usage{
-greedy(x)
+greedy(
+  training_data_x,
+  training_data_y,
+  split_count = 10,
+  data_in_leaves = 5,
+  classification_tree = FALSE,
+  random_subset = FALSE
+)
 }
 \arguments{
-\item{x}{whatever}
+\item{training_data_x}{Matrix of outputs (of given inputs)}
+
+\item{split_count}{Max amount of split depth (0 for no limit)}
+
+\item{data_in_leaves}{Amount data that should be in each leaf}
+
+\item{classification_tree}{Should the tree be a classification tree?}
+
+\item{random_subset}{Modification used for random_forest where only a random subset of dimensions is considered}
 }
 \description{
-there are more tags...
-compile with devtools::document()
+This function generates a decision tree with a greedy algorithm
 }

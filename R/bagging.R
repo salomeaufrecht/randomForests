@@ -18,7 +18,6 @@ bagging <- function(t, B = 10, lambda = 0, random_subset=FALSE) {
 bagging_regression <- function(t, B, lambda, random_subset = FALSE) {
     t_star <- list(B)
     for (i in 1:B) {
-        cat("Loop ", i, "\n")
         t_star[[i]] <- get_t_star(t, lambda)
     }
 
@@ -40,7 +39,6 @@ get_t_star <- function(t, lambda = 0, random_subset = FALSE) {
 
 
 get_bootstrap_sample <- function(t) {
-    #n <- length(t$training_data_x)
     n <- nrow(matrix(t$training_data_x, ncol=t$d))
     sample <- sample(1:n, n, replace = TRUE)
 }

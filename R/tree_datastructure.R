@@ -4,7 +4,6 @@ library(tidyr)
 #' getting child and parents elements, determining whether 
 #' an element is a leaf and finding the depth of an element.
 #' 
-#' 
 #' @export Tree
 #' @param length integer, is rounded to the next power of 2
 #' @param dimension integer, dimension of the input data
@@ -26,6 +25,7 @@ Tree <- setRefClass(
         risk = "numeric"
     ),
     methods = list(
+        
         initialize = function(training_data_x, training_data_y, classificationType = FALSE) {
             stopifnot("Training data does not match" = nrow(training_data_x) == nrow(training_data_y))
             length <- (2 ^ ceiling(log2(nrow(training_data_x)) )) 
@@ -136,7 +136,6 @@ Tree <- setRefClass(
             if(recalcRisk) .self$calc_risk(force=TRUE)
         },
         
-        #' test
         is_leaf = function(index) {
             if (!.self$exists(index)) stop("Node does not exist.")
             return(all(is.na(.self$get_child_indices(index))))
@@ -197,7 +196,7 @@ Tree <- setRefClass(
             for(i in 1:length(Y_hat)) {
                 abline(v=split_lines[i], lty=2, col="grey")
                 if (i > length(split_lines)-1) next
-                print(split_lines[i+1])
+                # print(split_lines[i+1])
                 X = c(split_lines[i],split_lines[i+1])
                 Y = rep(Y_hat[i],2)
                 lines(x=X,y=Y)

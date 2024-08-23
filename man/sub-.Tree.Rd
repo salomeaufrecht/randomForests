@@ -2,17 +2,16 @@
 % Please edit documentation in R/tree_datastructure.R
 \name{[.Tree}
 \alias{[.Tree}
-\title{Allows accessing the n-th element of the tree (equivalent to array representation)
+\title{Allow accessing the n-th element of the tree (equivalent to array representation)
 getting child and parents elements, determining whether}
 \usage{
-\method{[}{Tree}(x, value)
+\method{[}{Tree}(tree, value)
 }
 \arguments{
-\item{x}{tree}
+\item{tree}{tree}
 
 \item{value}{index of element}
 }
 \description{
-Allows accessing the n-th element of the tree (equivalent to array representation)
-getting child and parents elements, determining whether
+https://www.geeksforgeeks.org/array-representation-of-binary-heap/
 }
